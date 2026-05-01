@@ -26,13 +26,14 @@
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link <?php echo isActive('index'); ?>" href="index.php">Home</a></li>
-                <li class="nav-item"><a class="nav-link <?php echo isActive('portfolio'); ?>" href="portfolio.php">Portfolio</a></li>
-                <li class="nav-item"><a class="nav-link <?php echo isActive('contact'); ?>" href="contact.php">Contact</a></li>
-                <li class="nav-item"><a class="nav-link <?php echo isActive('about'); ?>" href="about.php">About</a></li>
-                <li class="nav-item"><a class="nav-link <?php echo isActive('location'); ?>" href="location.php">Location</a></li>
-            </ul>
+           <ul class="navbar-nav ms-auto">
+    <li class="nav-item"><a class="nav-link <?php echo isActive('index'); ?>" href="index.php">Home</a></li>
+    <li class="nav-item"><a class="nav-link <?php echo isActive('portfolio'); ?>" href="portfolio.php">Portfolio</a></li>
+    <li class="nav-item"><a class="nav-link <?php echo isActive('chairman-speech'); ?>" href="chairman-speech.php">Chairman's Speech</a></li>
+    <li class="nav-item"><a class="nav-link <?php echo isActive('contact'); ?>" href="contact.php">Contact</a></li>
+    <li class="nav-item"><a class="nav-link <?php echo isActive('about'); ?>" href="about.php">About</a></li>
+    <li class="nav-item"><a class="nav-link <?php echo isActive('location'); ?>" href="location.php">Location</a></li>
+</ul>
         </div>
     </div>
 </nav>
