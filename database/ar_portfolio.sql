@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 30, 2026 at 09:30 PM
+-- Generation Time: May 24, 2026 at 01:24 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -24,17 +24,103 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
--- Table structure for table `contacts`
+-- Table structure for table `admin_users`
 --
 
-CREATE TABLE `contacts` (
+CREATE TABLE `admin_users` (
   `id` int(11) NOT NULL,
-  `name` varchar(150) NOT NULL,
-  `email` varchar(200) NOT NULL,
-  `phone` varchar(50) DEFAULT NULL,
-  `message` text NOT NULL,
+  `username` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `admin_users`
+--
+
+INSERT INTO `admin_users` (`id`, `username`, `password`, `created_at`) VALUES
+(1, 'admin', 'admin123', '2026-05-23 21:20:23');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `chairman_speech`
+--
+
+CREATE TABLE `chairman_speech` (
+  `id` int(11) NOT NULL,
+  `speech_text` text NOT NULL,
+  `image_url` varchar(500) NOT NULL,
+  `is_active` tinyint(1) DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `chairman_speech`
+--
+
+INSERT INTO `chairman_speech` (`id`, `speech_text`, `image_url`, `is_active`) VALUES
+(1, 'At AR Tech Solutions, our mission is to bridge the gap between imagination and reality. We believe that augmented and virtual reality will redefine how we work, learn, and connect. With a passionate team of innovators and engineers, we are committed to delivering immersive solutions that create real value for our clients. The future is not something we wait for – it is something we build together. Thank you for being part of our journey.', 'https://randomuser.me/api/portraits/men/32.jpg', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `courses`
+--
+
+CREATE TABLE `courses` (
+  `id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `icon_class` varchar(100) DEFAULT 'fas fa-cube',
+  `link_url` varchar(255) DEFAULT '#',
+  `image_url` varchar(500) DEFAULT NULL,
+  `duration` varchar(50) DEFAULT NULL,
+  `level` varchar(50) DEFAULT NULL,
+  `price` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `enrolled_students` int(11) NOT NULL DEFAULT 0,
+  `status` tinyint(1) NOT NULL DEFAULT 1,
+  `order_position` int(11) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `courses`
+--
+
+INSERT INTO `courses` (`id`, `title`, `description`, `icon_class`, `link_url`, `image_url`, `duration`, `level`, `price`, `enrolled_students`, `status`, `order_position`, `created_at`) VALUES
+(6, '3D Content Creation', 'Master Blender, Maya, and real-time 3D assets for immersive applications.', 'fas fa-paint-brush', 'courses.php?id=6', NULL, '8 Weeks', 'Intermediate', 349.00, 24, 0, 6, '2026-05-24 09:27:56'),
+(7, 'ifjfjsjfjf', 'hdfhdhdfhdfhdfhdfhfdhdfhdfhfdhdfhfdhfdhfdhfdhdrhdhdhdhdhdhdhdrhdhdhfdhfdhdfhdrhdhdhdhdhdhdhdhdhdhfhdfhdfhfhf', 'fas fa-cube', '#', 'uploads/courses/1779615180_6a12c5cc03e0b.png', '6 ,m', 'Advanced', 5000.00, 0, 1, 0, '2026-05-24 09:33:01');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `customers`
+--
+
+CREATE TABLE `customers` (
+  `id` int(11) NOT NULL,
+  `customer_name` varchar(255) NOT NULL,
+  `logo_url` varchar(500) NOT NULL,
+  `country` varchar(100) DEFAULT NULL,
+  `district` varchar(100) DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `customers`
+--
+
+INSERT INTO `customers` (`id`, `customer_name`, `logo_url`, `country`, `district`, `is_active`) VALUES
+(1, 'TechHub Bangladesh', 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Logo_default.svg/200px-Logo_default.svg.png', 'Bangladesh', 'Dhaka', 1),
+(2, 'Rural Solutions Ltd.', 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Logo_default.svg/200px-Logo_default.svg.png', 'Bangladesh', 'Chittagong', 1),
+(3, 'Green Energy Corp', 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Logo_default.svg/200px-Logo_default.svg.png', 'Bangladesh', 'Rajshahi', 1),
+(4, 'Northern Fiber', 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Logo_default.svg/200px-Logo_default.svg.png', 'Bangladesh', 'Rangpur', 1),
+(5, 'Sylhet Tea Gardens', 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Logo_default.svg/200px-Logo_default.svg.png', 'Bangladesh', 'Sylhet', 1),
+(6, 'Khulna Shipyard', 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Logo_default.svg/200px-Logo_default.svg.png', 'Bangladesh', 'Khulna', 1),
+(7, 'Barishal Fisheries', 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Logo_default.svg/200px-Logo_default.svg.png', 'Bangladesh', 'Barishal', 1),
+(8, 'Mymensingh AgriTech', 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Logo_default.svg/200px-Logo_default.svg.png', 'Bangladesh', 'Mymensingh', 1),
+(9, 'Global AR Partners', 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Logo_default.svg/200px-Logo_default.svg.png', 'USA', NULL, 1),
+(10, 'Innovation Labs UK', 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Logo_default.svg/200px-Logo_default.svg.png', 'United Kingdom', NULL, 1);
 
 -- --------------------------------------------------------
 
@@ -44,23 +130,22 @@ CREATE TABLE `contacts` (
 
 CREATE TABLE `portfolios` (
   `id` int(11) NOT NULL,
-  `title` varchar(200) NOT NULL,
-  `client` varchar(150) DEFAULT NULL,
-  `category` varchar(100) DEFAULT NULL,
-  `image_url` varchar(500) DEFAULT NULL,
-  `description` text DEFAULT NULL,
-  `featured` tinyint(4) DEFAULT 0
+  `title` varchar(255) NOT NULL,
+  `client` varchar(255) DEFAULT NULL,
+  `description` text NOT NULL,
+  `image_url` varchar(500) NOT NULL,
+  `featured` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `portfolios`
 --
 
-INSERT INTO `portfolios` (`id`, `title`, `client`, `category`, `image_url`, `description`, `featured`) VALUES
-(1, 'Enterprise AR Maintenance System', 'Industrial Corp', 'Manufacturing', 'https://picsum.photos/id/20/600/400', 'Remote assistance and AR workflow guides that increased efficiency by 40%.', 1),
-(2, 'Surgical Guidance Interface', 'MedTech Innovation', 'Healthcare', 'https://picsum.photos/id/107/600/400', 'AR overlay for surgeons reducing operation planning time.', 1),
-(3, 'Cultural Heritage AR Experience', 'National Museum', 'Heritage', 'https://picsum.photos/id/96/600/400', 'Interactive exhibits with 3D reconstructions of artifacts.', 1),
-(4, 'AR Training Simulator', 'Global Aviation', 'Training', 'https://picsum.photos/id/125/600/400', 'Immersive pilot training modules reducing costs by 30%.', 0);
+INSERT INTO `portfolios` (`id`, `title`, `client`, `description`, `image_url`, `featured`, `created_at`) VALUES
+(1, 'Virtual Showroom for AutoWorld', 'AutoWorld Motors', 'Developed an interactive VR showroom allowing customers to explore car models in 360°.', 'https://picsum.photos/id/111/800/600', 1, '2026-05-23 20:50:52'),
+(2, 'AR Maintenance Guide for Heavy Machinery', 'IndustrialTech Ltd.', 'Mobile AR app that overlays repair steps on physical equipment, reducing downtime by 40%.', 'https://picsum.photos/id/48/800/600', 1, '2026-05-23 20:50:52'),
+(3, 'Interactive Museum Experience', 'National Heritage Trust', 'Created AR triggers that bring historical artifacts to life on visitors\' phones.', 'https://picsum.photos/id/96/800/600', 1, '2026-05-23 20:50:52');
 
 -- --------------------------------------------------------
 
@@ -71,21 +156,20 @@ INSERT INTO `portfolios` (`id`, `title`, `client`, `category`, `image_url`, `des
 CREATE TABLE `services` (
   `id` int(11) NOT NULL,
   `icon_class` varchar(100) NOT NULL,
-  `title` varchar(150) NOT NULL,
+  `title` varchar(255) NOT NULL,
   `description` text NOT NULL,
-  `link_text` varchar(50) DEFAULT 'Learn More',
-  `link_url` varchar(200) DEFAULT '#'
+  `link_url` varchar(255) DEFAULT '#'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `services`
 --
 
-INSERT INTO `services` (`id`, `icon_class`, `title`, `description`, `link_text`, `link_url`) VALUES
-(1, 'fas fa-cube', 'Augmented Reality Platforms', 'Custom AR development for enterprise and consumer applications with real-time tracking.', 'Learn More', 'portfolio.php'),
-(2, 'fas fa-chart-line', 'Spatial Data Analytics', 'Advanced analytics for 3D user interactions and spatial mapping insights.', 'Learn More', 'contact.php'),
-(3, 'fas fa-cloud-upload-alt', 'AR Cloud Infrastructure', 'Scalable cloud-based services for persistent, shared AR experiences.', 'Learn More', 'contact.php'),
-(4, 'fas fa-landmark', 'Cultural Heritage Experiences', 'Preserving history through interactive AR, tailored for museums and tourism.', 'Learn More', 'portfolio.php');
+INSERT INTO `services` (`id`, `icon_class`, `title`, `description`, `link_url`) VALUES
+(1, 'fas fa-vr-cardboard', 'VR Development', 'Custom virtual reality applications for training, simulation, and entertainment.', 'services.php#vr'),
+(2, 'fas fa-cube', 'AR Solutions', 'Marker-based and markerless AR for mobile and web platforms.', 'services.php#ar'),
+(3, 'fas fa-chart-line', 'Spatial Analytics', 'Data visualization and spatial computing for smart environments.', 'services.php#analytics'),
+(4, 'fas fa-paint-brush', '3D Content Creation', 'High-quality 3D modeling and animation for immersive experiences.', 'services.php#3d');
 
 -- --------------------------------------------------------
 
@@ -95,23 +179,52 @@ INSERT INTO `services` (`id`, `icon_class`, `title`, `description`, `link_text`,
 
 CREATE TABLE `sliders` (
   `id` int(11) NOT NULL,
-  `title` varchar(200) NOT NULL,
+  `title` varchar(255) NOT NULL,
   `subtitle` text DEFAULT NULL,
   `image_url` varchar(500) NOT NULL,
   `button_text` varchar(100) DEFAULT NULL,
-  `button_link` varchar(300) DEFAULT NULL,
-  `order_position` int(11) DEFAULT 0,
-  `status` tinyint(4) DEFAULT 1
+  `button_link` varchar(255) DEFAULT NULL,
+  `status` tinyint(1) DEFAULT 1,
+  `order_position` int(11) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `sliders`
 --
 
-INSERT INTO `sliders` (`id`, `title`, `subtitle`, `image_url`, `button_text`, `button_link`, `order_position`, `status`) VALUES
-(1, 'Augmenting Your Reality', 'Precision AR solutions for enterprise & creativity', 'https://picsum.photos/id/13/1920/1080', 'Discover Services', '#services', 1, 1),
-(2, 'Spatial Intelligence Redefined', 'Real-time 3D mapping & analytics dashboard', 'https://picsum.photos/id/26/1920/1080', 'Explore Platform', 'portfolio.php', 2, 1),
-(3, 'Cultural Heritage AR', 'Immersive museum experiences powered by AR Cloud', 'https://picsum.photos/id/104/1920/1080', 'See Projects', 'portfolio.php', 3, 1);
+INSERT INTO `sliders` (`id`, `title`, `subtitle`, `image_url`, `button_text`, `button_link`, `status`, `order_position`) VALUES
+(1, 'Immersive Augmented Reality', 'Transform how your business interacts with the digital world.', 'https://picsum.photos/id/13/1920/1080', 'Explore Solutions', 'services.php', 1, 1),
+(2, 'Next-Gen VR Experiences', 'Step into a new dimension with our virtual reality solutions.', 'https://picsum.photos/id/26/1920/1080', 'View Portfolio', 'portfolio.php', 1, 2),
+(3, 'AR for Enterprise', 'Boost efficiency and engagement with custom AR applications.', 'https://picsum.photos/id/42/1920/1080', 'Contact Us', 'contact.php', 1, 3);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `team_members`
+--
+
+CREATE TABLE `team_members` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `position` varchar(255) NOT NULL,
+  `bio` text DEFAULT NULL,
+  `image_url` varchar(500) NOT NULL,
+  `social_facebook` varchar(255) DEFAULT NULL,
+  `social_twitter` varchar(255) DEFAULT NULL,
+  `social_linkedin` varchar(255) DEFAULT NULL,
+  `order_position` int(11) DEFAULT 0,
+  `is_active` tinyint(1) DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `team_members`
+--
+
+INSERT INTO `team_members` (`id`, `name`, `position`, `bio`, `image_url`, `social_facebook`, `social_twitter`, `social_linkedin`, `order_position`, `is_active`) VALUES
+(1, 'John Carter', 'CEO & Founder', 'Visionary leader with 20+ years in immersive tech.', 'https://randomuser.me/api/portraits/men/32.jpg', '#', '#', '#', 1, 1),
+(2, 'Dr. Sarah Chen', 'Head of AR Research', 'PhD in Computer Vision, leading our innovation lab.', 'https://randomuser.me/api/portraits/women/68.jpg', '#', '#', '#', 2, 1),
+(3, 'Michael Rodriguez', 'Lead VR Engineer', 'Expert in Unity and Unreal Engine for enterprise VR.', 'https://randomuser.me/api/portraits/men/45.jpg', '#', '#', '#', 3, 1),
+(4, 'Emma Watson', 'Creative Director', 'Award-winning 3D designer and spatial storyteller.', 'https://randomuser.me/api/portraits/women/89.jpg', '#', '#', '#', 4, 1);
 
 -- --------------------------------------------------------
 
@@ -121,30 +234,48 @@ INSERT INTO `sliders` (`id`, `title`, `subtitle`, `image_url`, `button_text`, `b
 
 CREATE TABLE `testimonials` (
   `id` int(11) NOT NULL,
-  `client_name` varchar(150) NOT NULL,
-  `client_title` varchar(100) DEFAULT NULL,
-  `company` varchar(150) DEFAULT NULL,
-  `testimonial_text` text NOT NULL,
-  `rating` int(11) DEFAULT 5
+  `client_name` varchar(255) NOT NULL,
+  `client_title` varchar(255) DEFAULT NULL,
+  `company` varchar(255) DEFAULT NULL,
+  `testimonial_text` text NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `testimonials`
 --
 
-INSERT INTO `testimonials` (`id`, `client_name`, `client_title`, `company`, `testimonial_text`, `rating`) VALUES
-(1, 'Sarah Chen', 'CEO', 'AppVision', 'Uncompromising work environment, AR Tech Solutions creates high energy atmosphere. The precision is unmatched. Highly recommend their team!', 5),
-(2, 'John Smith', 'Director of Innovation', 'MedTech Innovation', 'I have been using this platform for over two years and it has made all the difference in surgical training. I highly recommend it!', 5),
-(3, 'Emily Rodriguez', 'CTO', 'Heritage Interactive', 'The AR Cloud solution transformed our museum experience. Visitor engagement increased by 200%. Exceptional support.', 5);
+INSERT INTO `testimonials` (`id`, `client_name`, `client_title`, `company`, `testimonial_text`) VALUES
+(1, 'Sarah Johnson', 'CTO', 'AutoWorld Motors', 'The VR showroom increased our customer engagement by over 200%. The AR Tech team delivered beyond expectations.'),
+(2, 'Mohammed Rahman', 'Operations Director', 'IndustrialTech Ltd.', 'Their AR maintenance solution saved us countless hours in training and reduced errors significantly. Highly recommended.'),
+(3, 'Elena Martinez', 'Museum Curator', 'National Heritage Trust', 'Visitors love the interactive experience. Professional, creative, and technically flawless execution.');
 
 --
 -- Indexes for dumped tables
 --
 
 --
--- Indexes for table `contacts`
+-- Indexes for table `admin_users`
 --
-ALTER TABLE `contacts`
+ALTER TABLE `admin_users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `username` (`username`);
+
+--
+-- Indexes for table `chairman_speech`
+--
+ALTER TABLE `chairman_speech`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `courses`
+--
+ALTER TABLE `courses`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `customers`
+--
+ALTER TABLE `customers`
   ADD PRIMARY KEY (`id`);
 
 --
@@ -166,6 +297,12 @@ ALTER TABLE `sliders`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `team_members`
+--
+ALTER TABLE `team_members`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `testimonials`
 --
 ALTER TABLE `testimonials`
@@ -176,16 +313,34 @@ ALTER TABLE `testimonials`
 --
 
 --
--- AUTO_INCREMENT for table `contacts`
+-- AUTO_INCREMENT for table `admin_users`
 --
-ALTER TABLE `contacts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+ALTER TABLE `admin_users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `chairman_speech`
+--
+ALTER TABLE `chairman_speech`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `courses`
+--
+ALTER TABLE `courses`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT for table `customers`
+--
+ALTER TABLE `customers`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `portfolios`
 --
 ALTER TABLE `portfolios`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `services`
@@ -198,6 +353,12 @@ ALTER TABLE `services`
 --
 ALTER TABLE `sliders`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `team_members`
+--
+ALTER TABLE `team_members`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `testimonials`
