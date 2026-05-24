@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 24, 2026 at 01:24 PM
+-- Generation Time: May 24, 2026 at 07:53 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -71,12 +71,24 @@ CREATE TABLE `courses` (
   `id` int(11) NOT NULL,
   `title` varchar(255) NOT NULL,
   `description` text DEFAULT NULL,
+  `short_description` text DEFAULT NULL,
   `icon_class` varchar(100) DEFAULT 'fas fa-cube',
   `link_url` varchar(255) DEFAULT '#',
   `image_url` varchar(500) DEFAULT NULL,
   `duration` varchar(50) DEFAULT NULL,
+  `total_classes` int(11) DEFAULT 0,
+  `total_projects` int(11) DEFAULT 0,
+  `instructor_name` varchar(255) DEFAULT NULL,
+  `instructor_bio` text DEFAULT NULL,
+  `instructor_image` varchar(500) DEFAULT NULL,
+  `curriculum` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`curriculum`)),
+  `career_outcomes` text DEFAULT NULL,
+  `prerequisites` text DEFAULT NULL,
+  `software_learned` text DEFAULT NULL,
+  `is_popular` tinyint(4) DEFAULT 0,
   `level` varchar(50) DEFAULT NULL,
   `price` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `price_offline` decimal(10,2) DEFAULT 0.00,
   `enrolled_students` int(11) NOT NULL DEFAULT 0,
   `status` tinyint(1) NOT NULL DEFAULT 1,
   `order_position` int(11) DEFAULT 0,
@@ -87,9 +99,9 @@ CREATE TABLE `courses` (
 -- Dumping data for table `courses`
 --
 
-INSERT INTO `courses` (`id`, `title`, `description`, `icon_class`, `link_url`, `image_url`, `duration`, `level`, `price`, `enrolled_students`, `status`, `order_position`, `created_at`) VALUES
-(6, '3D Content Creation', 'Master Blender, Maya, and real-time 3D assets for immersive applications.', 'fas fa-paint-brush', 'courses.php?id=6', NULL, '8 Weeks', 'Intermediate', 349.00, 24, 0, 6, '2026-05-24 09:27:56'),
-(7, 'ifjfjsjfjf', 'hdfhdhdfhdfhdfhdfhfdhdfhdfhfdhdfhfdhfdhfdhfdhdrhdhdhdhdhdhdhdrhdhdhfdhfdhdfhdrhdhdhdhdhdhdhdhdhdhfhdfhdfhfhf', 'fas fa-cube', '#', 'uploads/courses/1779615180_6a12c5cc03e0b.png', '6 ,m', 'Advanced', 5000.00, 0, 1, 0, '2026-05-24 09:33:01');
+INSERT INTO `courses` (`id`, `title`, `description`, `short_description`, `icon_class`, `link_url`, `image_url`, `duration`, `total_classes`, `total_projects`, `instructor_name`, `instructor_bio`, `instructor_image`, `curriculum`, `career_outcomes`, `prerequisites`, `software_learned`, `is_popular`, `level`, `price`, `price_offline`, `enrolled_students`, `status`, `order_position`, `created_at`) VALUES
+(6, '3D Content Creation', 'Master Blender, Maya, and real-time 3D assets for immersive applications.', NULL, 'fas fa-paint-brush', 'courses.php?id=6', NULL, '8 Weeks', 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'Intermediate', 349.00, 0.00, 24, 0, 6, '2026-05-24 09:27:56'),
+(7, 'ifjfjsjfjf', 'hdfhdhdfhdfhdfhdfhfdhdfhdfhfdhdfhfdhfdhfdhfdhdrhdhdhdhdhdhdhdrhdhdhfdhfdhdfhdrhdhdhdhdhdhdhdhdhdhfhdfhdfhfhf', NULL, 'fas fa-cube', '#', 'uploads/courses/1779615180_6a12c5cc03e0b.png', '6 ,m', 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'Advanced', 5000.00, 0.00, 1, 1, 0, '2026-05-24 09:33:01');
 
 -- --------------------------------------------------------
 
@@ -121,6 +133,33 @@ INSERT INTO `customers` (`id`, `customer_name`, `logo_url`, `country`, `district
 (8, 'Mymensingh AgriTech', 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Logo_default.svg/200px-Logo_default.svg.png', 'Bangladesh', 'Mymensingh', 1),
 (9, 'Global AR Partners', 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Logo_default.svg/200px-Logo_default.svg.png', 'USA', NULL, 1),
 (10, 'Innovation Labs UK', 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Logo_default.svg/200px-Logo_default.svg.png', 'United Kingdom', NULL, 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `enrollments`
+--
+
+CREATE TABLE `enrollments` (
+  `id` int(11) NOT NULL,
+  `course_id` int(11) NOT NULL,
+  `student_name` varchar(255) NOT NULL,
+  `student_email` varchar(255) NOT NULL,
+  `student_phone` varchar(50) NOT NULL,
+  `student_address` text DEFAULT NULL,
+  `payment_method` varchar(50) DEFAULT 'sslcommerz',
+  `payment_status` enum('pending','completed','failed','cancelled') DEFAULT 'pending',
+  `transaction_id` varchar(255) DEFAULT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `enrollment_date` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `enrollments`
+--
+
+INSERT INTO `enrollments` (`id`, `course_id`, `student_name`, `student_email`, `student_phone`, `student_address`, `payment_method`, `payment_status`, `transaction_id`, `amount`, `enrollment_date`) VALUES
+(1, 7, 'JAHID KHAN', 'mdjhk300@gmail.com', '01957288638', 'Dhaka,Gazipur,Boardbazar,National university,\r\nsouth khailkur,38no woard,sohid siddik road, holding no:446', 'demo', 'completed', NULL, 5000.00, '2026-05-24 17:52:40');
 
 -- --------------------------------------------------------
 
@@ -279,6 +318,15 @@ ALTER TABLE `customers`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `enrollments`
+--
+ALTER TABLE `enrollments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `course_id` (`course_id`),
+  ADD KEY `payment_status` (`payment_status`),
+  ADD KEY `transaction_id` (`transaction_id`);
+
+--
 -- Indexes for table `portfolios`
 --
 ALTER TABLE `portfolios`
@@ -337,6 +385,12 @@ ALTER TABLE `customers`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
+-- AUTO_INCREMENT for table `enrollments`
+--
+ALTER TABLE `enrollments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- AUTO_INCREMENT for table `portfolios`
 --
 ALTER TABLE `portfolios`
@@ -365,6 +419,16 @@ ALTER TABLE `team_members`
 --
 ALTER TABLE `testimonials`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `enrollments`
+--
+ALTER TABLE `enrollments`
+  ADD CONSTRAINT `enrollments_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

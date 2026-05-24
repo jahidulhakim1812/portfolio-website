@@ -510,7 +510,7 @@ $activeDivisions = array_keys($activeDivisions);
         </div>
     </section>
 
-    <!-- Our Courses (2 columns on mobile) – Images at top like featured projects -->
+    <!-- Our Courses (2 columns on mobile) – Clickable cards linking to course-details.php -->
     <section class="py-5" style="background: rgba(124,58,237,0.03);">
         <div class="container">
             <div class="text-center mb-5">
@@ -521,24 +521,29 @@ $activeDivisions = array_keys($activeDivisions);
             <div class="row g-4">
                 <?php foreach($courses as $course): ?>
                 <div class="col-6 col-md-6 col-lg-3 course-col">
-                    <div class="glass-card h-100 d-flex flex-column">
-                        <?php if(!empty($course['image_url'])): ?>
-                            <img src="<?php echo htmlspecialchars($course['image_url']); ?>" class="card-img-top" alt="<?php echo htmlspecialchars($course['title']); ?>">
-                        <?php else: ?>
-                            <div class="card-img-top d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, var(--primary), var(--secondary)); height: 200px;">
-                                <i class="<?php echo htmlspecialchars($course['icon_class']); ?> fa-4x text-white"></i>
+                    <a href="course-details.php?id=<?php echo $course['id']; ?>" class="text-decoration-none">
+                        <div class="glass-card h-100 d-flex flex-column">
+                            <?php if(!empty($course['image_url'])): ?>
+                                <img src="<?php echo htmlspecialchars($course['image_url']); ?>" class="card-img-top" alt="<?php echo htmlspecialchars($course['title']); ?>">
+                            <?php else: ?>
+                                <div class="card-img-top d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, var(--primary), var(--secondary)); height: 200px;">
+                                    <i class="<?php echo htmlspecialchars($course['icon_class']); ?> fa-4x text-white"></i>
+                                </div>
+                            <?php endif; ?>
+                            <div class="card-body">
+                                <h5><?php echo htmlspecialchars($course['title']); ?></h5>
+                                <div class="d-flex gap-2 my-2">
+                                    <span class="badge bg-primary"><?php echo htmlspecialchars($course['level']); ?></span>
+                                    <span class="badge bg-secondary"><?php echo htmlspecialchars($course['duration']); ?></span>
+                                </div>
+                                <p class="small text-muted-custom"><?php echo htmlspecialchars($course['description']); ?></p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold text-primary">$<?php echo number_format($course['price'], 2); ?></span>
+                                    <span class="badge bg-info"><?php echo $course['enrolled_students']; ?>+ enrolled</span>
+                                </div>
                             </div>
-                        <?php endif; ?>
-                        <div class="card-body">
-                            <h5><?php echo htmlspecialchars($course['title']); ?></h5>
-                            <div class="d-flex gap-2 my-2">
-                                <span class="badge bg-primary"><?php echo htmlspecialchars($course['level']); ?></span>
-                                <span class="badge bg-secondary"><?php echo htmlspecialchars($course['duration']); ?></span>
-                            </div>
-                            <p class="small text-muted-custom"><?php echo htmlspecialchars($course['description']); ?></p>
-                            <a href="<?php echo htmlspecialchars($course['link_url']); ?>" class="btn btn-outline-custom btn-sm mt-2">Enroll →</a>
                         </div>
-                    </div>
+                    </a>
                 </div>
                 <?php endforeach; ?>
             </div>
