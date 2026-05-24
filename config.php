@@ -1,6 +1,8 @@
 <?php
-// config.php - Database Configuration
-session_start();
+// config.php - Database Configuration (with safe session start)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 $host = 'localhost';
 $dbname = 'ar_portfolio';
@@ -15,7 +17,7 @@ try {
     die("Connection failed: " . $e->getMessage());
 }
 
-// Helper function to get active menu class
+// Helper function for active menu (optional)
 function isActive($page) {
     $currentFile = basename($_SERVER['PHP_SELF'], '.php');
     return ($currentFile == $page) ? 'active' : '';

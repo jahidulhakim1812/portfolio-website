@@ -1,340 +1,479 @@
 <?php
-// index.php - Homepage with fullscreen slider, services, projects, chairman preview, counters, Bangladesh map, client logos, testimonials
+// index.php - Complete dynamic homepage with perfect dark mode, circle-only Bangladesh map, floating message icon
 require_once 'config.php';
 
-// Fetch slider images from DB
+// Fetch all dynamic content
 $sliders = $pdo->query("SELECT * FROM sliders WHERE status = 1 ORDER BY order_position ASC")->fetchAll();
-
-// Fetch services
 $services = $pdo->query("SELECT * FROM services ORDER BY id LIMIT 4")->fetchAll();
-
-// Fetch featured projects
 $featuredProjects = $pdo->query("SELECT * FROM portfolios WHERE featured = 1 ORDER BY id DESC LIMIT 3")->fetchAll();
-
-// Fetch testimonials
 $testimonials = $pdo->query("SELECT * FROM testimonials ORDER BY id LIMIT 3")->fetchAll();
-
-// Fetch chairman speech (active)
 $chairmanSpeech = $pdo->query("SELECT * FROM chairman_speech WHERE is_active = 1 LIMIT 1")->fetch();
+
+// Fetch courses from database (with image support)
+$courses = $pdo->query("SELECT * FROM courses WHERE status = 1 ORDER BY order_position ASC, id ASC LIMIT 4")->fetchAll();
 
 // Counters
 $totalCustomers = $pdo->query("SELECT COUNT(*) FROM customers WHERE is_active = 1")->fetchColumn();
 $totalCountries = $pdo->query("SELECT COUNT(DISTINCT country) FROM customers WHERE is_active = 1")->fetchColumn();
 $activeDistricts = $pdo->query("SELECT COUNT(DISTINCT district) FROM customers WHERE district IS NOT NULL AND country = 'Bangladesh' AND district != ''")->fetchColumn();
 
-// Fetch all customers for logos
+// Customer logos
 $allCustomers = $pdo->query("SELECT customer_name, logo_url, country FROM customers WHERE is_active = 1 ORDER BY customer_name")->fetchAll();
 
-// Fetch list of district names that have service (for map coloring)
+// Active districts list (for map markers)
 $activeDistrictList = $pdo->query("SELECT DISTINCT district FROM customers WHERE country = 'Bangladesh' AND district IS NOT NULL AND district != ''")->fetchAll(PDO::FETCH_COLUMN);
+
+// Coordinates for divisions
+$divisionCoordinates = [
+    'Dhaka'       => [23.8103, 90.4125],
+    'Chattogram'  => [22.3569, 91.7832],
+    'Rajshahi'    => [24.3745, 88.6042],
+    'Khulna'      => [22.8456, 89.5403],
+    'Sylhet'      => [24.8993, 91.8719],
+    'Barishal'    => [22.7010, 90.3535],
+    'Rangpur'     => [25.7439, 89.2752],
+    'Mymensingh'  => [24.7471, 90.4073]
+];
+
+// Map districts to divisions
+$districtToDivision = [
+    'Dhaka' => 'Dhaka', 'Gazipur' => 'Dhaka', 'Narayanganj' => 'Dhaka', 'Tangail' => 'Dhaka', 'Kishoreganj' => 'Dhaka',
+    'Chittagong' => 'Chattogram', 'Cox\'s Bazar' => 'Chattogram', 'Comilla' => 'Chattogram', 'Noakhali' => 'Chattogram', 'Feni' => 'Chattogram',
+    'Rajshahi' => 'Rajshahi', 'Natore' => 'Rajshahi', 'Pabna' => 'Rajshahi', 'Bogra' => 'Rajshahi',
+    'Khulna' => 'Khulna', 'Jessore' => 'Khulna', 'Satkhira' => 'Khulna', 'Kushtia' => 'Khulna',
+    'Sylhet' => 'Sylhet', 'Moulvibazar' => 'Sylhet', 'Habiganj' => 'Sylhet',
+    'Barishal' => 'Barishal', 'Patuakhali' => 'Barishal', 'Bhola' => 'Barishal',
+    'Rangpur' => 'Rangpur', 'Dinajpur' => 'Rangpur', 'Thakurgaon' => 'Rangpur',
+    'Mymensingh' => 'Mymensingh', 'Jamalpur' => 'Mymensingh', 'Netrokona' => 'Mymensingh'
+];
+
+$activeDivisions = [];
+foreach ($activeDistrictList as $district) {
+    if (isset($districtToDivision[$district])) {
+        $activeDivisions[$districtToDivision[$district]] = true;
+    }
+}
+$activeDivisions = array_keys($activeDivisions);
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>AR Tech Solutions - Immersive Reality Experiences</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>AR Tech Solutions | Immersive Reality</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700;14..32,800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- Swiper CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
-    <!-- Leaflet CSS for map -->
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Custom Styles -->
     <style>
+        /* ---------- UNIQUE DESIGN SYSTEM: PERFECT DARK/LIGHT CONTRAST ---------- */
         :root {
-            --primary: #5e2ced;
-            --primary-dark: #4a1fdb;
-            --secondary: #00c2d1;
-            --dark: #0a0b10;
-            --light: #f8f9ff;
+            --primary: #7c3aed;
+            --primary-dark: #5b21b6;
+            --primary-light: #a78bfa;
+            --secondary: #06b6d4;
+            --accent: #f43f5e;
+            --bg-light: #ffffff;
+            --bg-dark: #0f0f12;
+            --surface-light: #f8fafc;
+            --surface-dark: #1e1e2a;
+            --text-light: #1e293b;
+            --text-dark: #e2e8f0;
+            --text-muted-light: #64748b;
+            --text-muted-dark: #94a3b8;
+            --border-light: #e2e8f0;
+            --border-dark: #2d3a4e;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
         }
         body {
-            font-family: 'Poppins', 'Segoe UI', sans-serif;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-light);
+            color: var(--text-light);
+            transition: background 0.3s ease, color 0.2s ease;
             overflow-x: hidden;
-            background-color: #fff;
+        }
+        body.dark {
+            background: var(--bg-dark);
+            color: var(--text-dark);
+        }
+        * {
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+        h1, h2, h3, h4, .brand {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
         }
         /* Navbar */
-        .main-navbar {
+        .glass-nav {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
+            top: 20px;
+            left: 5%;
+            width: 90%;
             z-index: 1030;
-            background: rgba(10, 11, 16, 0.85);
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-            padding: 1rem 0;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border-radius: 60px;
+            border: 1px solid rgba(124, 58, 237, 0.2);
+            box-shadow: var(--shadow);
+            transition: all 0.3s;
+            padding: 0.5rem 1rem;
         }
-        .main-navbar .navbar-brand {
-            color: white;
-            font-weight: 700;
-            font-size: 1.5rem;
+        body.dark .glass-nav {
+            background: rgba(15, 15, 18, 0.85);
+            border-color: rgba(124, 58, 237, 0.4);
         }
-        .main-navbar .navbar-brand i {
-            color: var(--secondary);
-            margin-right: 8px;
+        .glass-nav.scrolled {
+            top: 5px;
+            width: 96%;
+            left: 2%;
+            background: rgba(255, 255, 255, 0.98);
         }
-        .main-navbar .nav-link {
-            color: rgba(255,255,255,0.85);
-            font-weight: 500;
+        body.dark .glass-nav.scrolled {
+            background: rgba(10, 10, 15, 0.98);
+        }
+        .navbar-brand {
+            font-size: 1.6rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .nav-link {
+            font-weight: 600;
+            color: var(--text-light) !important;
             margin: 0 0.5rem;
+            position: relative;
+        }
+        body.dark .nav-link {
+            color: var(--text-dark) !important;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary);
             transition: 0.3s;
         }
-        .main-navbar .nav-link:hover,
-        .main-navbar .nav-link.active {
+        .nav-link:hover::after {
+            width: 100%;
+        }
+        .dark-toggle {
+            background: rgba(124, 58, 237, 0.15);
+            border: none;
+            border-radius: 40px;
+            width: 44px;
+            height: 44px;
+            color: var(--primary);
+            transition: 0.2s;
+        }
+        body.dark .dark-toggle {
+            background: rgba(124, 58, 237, 0.3);
             color: var(--secondary);
         }
-        .navbar-toggler {
-            background-color: white;
-        }
-        /* Fullscreen Slider */
-        .fullscreen-slider {
+        /* Hero Slider - full screen on mobile */
+        .hero-slider {
             width: 100%;
-            height: 100vh;
+            height: 100dvh;
+            min-height: -webkit-fill-available;
             position: relative;
-            overflow: hidden;
         }
-        .heroSwiper {
-            width: 100%;
+        .heroSwiper, .heroSwiper .swiper-wrapper, .heroSwiper .swiper-slide {
             height: 100%;
         }
         .swiper-slide {
-            background-size: cover;
-            background-position: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
+            position: relative;
         }
-        .slide-content {
-            color: white;
+        .slide-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: brightness(0.6);
+        }
+        .hero-content {
+            position: relative;
             z-index: 2;
-            text-shadow: 0 2px 15px rgba(0,0,0,0.3);
+            text-align: center;
+            color: white;
+            padding: 0 1rem;
         }
-        .slide-title {
-            font-size: 4rem;
+        .hero-title {
+            font-size: 4.5rem;
             font-weight: 800;
-            margin-bottom: 1rem;
-            animation: fadeInUp 1s ease;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
-        .slide-subtitle {
-            font-size: 1.2rem;
-            max-width: 700px;
-            margin: 0 auto 1.5rem;
-            opacity: 0.9;
+        /* Mobile responsive: 2 columns for services, courses, projects, testimonials */
+        @media (max-width: 768px) {
+            .hero-title { 
+                font-size: 2.5rem; 
+            }
+            .hero-content .fs-4 {
+                font-size: 1.1rem !important;
+            }
+            .glass-nav {
+                top: 10px;
+                width: 94%;
+                left: 3%;
+            }
+            .navbar-collapse {
+                background: rgba(255,255,255,0.95);
+                border-radius: 28px;
+                padding: 1rem;
+                margin-top: 1rem;
+            }
+            body.dark .navbar-collapse {
+                background: rgba(20,20,30,0.95);
+            }
+            /* 2 columns on mobile */
+            .service-col, .course-col, .project-col, .testimonial-col {
+                flex: 0 0 50%;
+                max-width: 50%;
+            }
         }
-        .btn-primary {
-            background: var(--primary);
+        /* Buttons */
+        .btn-primary-custom {
+            background: linear-gradient(95deg, var(--primary), var(--secondary));
             border: none;
             padding: 12px 32px;
             border-radius: 40px;
             font-weight: 600;
-        }
-        .btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-        }
-        .swiper-button-next, .swiper-button-prev {
             color: white;
-            background: rgba(0,0,0,0.3);
-            border-radius: 50%;
-            width: 45px;
-            height: 45px;
-        }
-        .swiper-pagination-bullet-active {
-            background: var(--secondary);
-        }
-        /* Service Cards */
-        .service-card {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-            border: 1px solid rgba(94,44,237,0.1);
-        }
-        .service-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 25px 40px rgba(94,44,237,0.15);
-        }
-        .service-icon i {
-            font-size: 3rem;
-            color: var(--primary);
-            margin-bottom: 1rem;
-        }
-        .service-link {
-            text-decoration: none;
-            font-weight: 600;
-            color: var(--primary);
-        }
-        /* Project Cards */
-        .project-card {
-            background: white;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-            transition: 0.3s;
-            height: 100%;
-        }
-        .project-card:hover {
-            transform: scale(1.02);
-        }
-        .project-img {
-            height: 220px;
-            background-size: cover;
-            background-position: center;
-        }
-        .client-name {
-            font-size: 0.9rem;
-            color: var(--primary);
-        }
-        /* Testimonials */
-        .testimonial-card {
-            background: #f9f9ff;
-            border-radius: 30px;
-            position: relative;
             transition: 0.3s;
         }
-        .testimonial-icon i {
-            font-size: 2.5rem;
+        .btn-primary-custom:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(124, 58, 237, 0.3);
+        }
+        .btn-outline-custom {
+            border: 2px solid var(--primary);
+            background: transparent;
+            border-radius: 40px;
+            padding: 8px 24px;
+            color: var(--primary);
+            font-weight: 500;
+        }
+        body.dark .btn-outline-custom {
             color: var(--secondary);
-            opacity: 0.7;
+            border-color: var(--secondary);
         }
-        .testimonial-text {
-            font-size: 1rem;
-            line-height: 1.6;
-            color: #333;
+        /* Cards */
+        .glass-card {
+            background: var(--surface-light);
+            border-radius: 28px;
+            border: 1px solid var(--border-light);
+            transition: all 0.3s;
+            height: 100%;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        body.dark .glass-card {
+            background: var(--surface-dark);
+            border-color: var(--border-dark);
+        }
+        .glass-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 30px -12px rgba(0, 0, 0, 0.2);
+        }
+        .card-img-top {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        .card-body {
+            padding: 1.5rem;
+        }
+        .service-icon i, .course-icon i {
+            font-size: 2.5rem;
+            color: var(--primary);
         }
         /* Counters */
         .counter-card {
-            background: white;
-            border-radius: 30px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-            transition: 0.3s;
+            background: var(--surface-light);
+            border-radius: 32px;
+            padding: 2rem;
+            text-align: center;
+            border: 1px solid var(--border-light);
         }
-        .counter-card:hover { transform: translateY(-5px); }
+        body.dark .counter-card {
+            background: var(--surface-dark);
+        }
         .counter-num {
             font-size: 3rem;
             font-weight: 800;
             color: var(--primary);
-            margin: 1rem 0;
         }
-        /* Logo cards */
-        .logo-card {
-            background: white;
-            border-radius: 16px;
+        /* Map */
+        #bangladeshMap {
+            height: 480px;
+            border-radius: 28px;
+            overflow: hidden;
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow);
+        }
+        /* Trusted by Innovators - Swiper slider with fixed size */
+        .trusted-section {
+            background: #ffffff;
+        }
+        body.dark .trusted-section {
+            background: var(--surface-dark);
+        }
+        .logo-swiper-slide {
+            text-align: center;
+            padding: 0.5rem;
+        }
+        .logo-card-fixed {
+            background: transparent;
             padding: 1rem;
-            transition: all 0.3s;
-            border: 1px solid #eee;
+            border-radius: 20px;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100px;
         }
-        .logo-card:hover {
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        .logo-card-fixed img {
+            max-height: 60px;
+            max-width: 100%;
+            object-fit: contain;
+            filter: grayscale(20%);
+            transition: 0.2s;
+        }
+        .logo-card-fixed:hover img {
+            filter: grayscale(0%);
             transform: scale(1.02);
         }
-        .logo-card img {
-            filter: grayscale(20%);
-            transition: 0.3s;
-            max-height: 80px;
-            object-fit: contain;
+        /* Testimonials */
+        .testimonial-card {
+            background: var(--surface-light);
+            border-radius: 24px;
+            padding: 1.8rem;
+            border: 1px solid var(--border-light);
+            height: 100%;
         }
-        .logo-card:hover img { filter: grayscale(0%); }
-        /* Chairman preview */
-        .chairman-preview .rounded-circle {
-            border: 4px solid var(--primary);
+        body.dark .testimonial-card {
+            background: var(--surface-dark);
         }
-        /* Map container */
-        #bangladeshMap {
-            height: 500px;
-            width: 100%;
-            border-radius: 20px;
-            z-index: 1;
+        /* CTA */
+        .cta-modern {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 48px;
+            padding: 3rem;
+            text-align: center;
+            color: white;
         }
-        .map-legend {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-bottom: 15px;
-            background: white;
-            padding: 8px 20px;
-            border-radius: 40px;
-            width: fit-content;
-            margin-left: auto;
-            margin-right: auto;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .map-legend span {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-            margin-right: 6px;
-            vertical-align: middle;
-        }
-        .map-legend .active {
-            background-color: #2ecc71;
-            border: 1px solid #27ae60;
-        }
-        .map-legend .inactive {
-            background-color: #d3d3d3;
-            border: 1px solid #aaa;
-        }
-        .cta-section {
-            background: linear-gradient(135deg, var(--primary), #7a4af5);
-        }
+        /* Footer */
         footer {
-            background: #0a0b10;
-            color: #ccc;
-            padding: 2rem 0;
+            background: #0f172a;
+            color: #cbd5e1;
+            padding: 3rem 0 1.5rem;
         }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(40px); }
-            to { opacity: 1; transform: translateY(0); }
+        body.dark footer {
+            background: #020617;
         }
-        @media (max-width: 768px) {
-            .slide-title { font-size: 2rem; }
-            .main-navbar { background: rgba(10,11,16,0.95); }
+        footer a {
+            color: #94a3b8;
+            text-decoration: none;
+        }
+        footer a:hover {
+            color: var(--secondary);
+        }
+        /* Floating message icon */
+        .floating-msg {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--primary);
+            width: 56px;
+            height: 56px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 99;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transition: 0.2s;
+            color: white;
+            font-size: 1.6rem;
+        }
+        .floating-msg:hover {
+            transform: scale(1.1);
+            background: var(--secondary);
+        }
+        /* Back to top */
+        .back-to-top {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            background: var(--primary-dark);
+            width: 44px;
+            height: 44px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: 0.3s;
+            z-index: 99;
+            color: white;
+        }
+        .back-to-top.show { opacity: 1; }
+        /* Text adjustments */
+        .text-muted-custom {
+            color: var(--text-muted-light);
+        }
+        body.dark .text-muted-custom {
+            color: var(--text-muted-dark);
         }
     </style>
 </head>
 <body>
 
 <!-- Navbar -->
-<nav class="navbar navbar-expand-lg main-navbar">
-    <div class="container">
-        <a class="navbar-brand" href="index.php">
-            <i class="fas fa-vr-cardboard"></i> AR Tech Solutions
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+<nav class="navbar navbar-expand-lg glass-nav" id="mainNavbar">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="index.php"><i class="fas fa-vr-cardboard me-2"></i>ARTECH</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item"><a class="nav-link active" href="index.php">Home</a></li>
                 <li class="nav-item"><a class="nav-link" href="portfolio.php">Portfolio</a></li>
-                <li class="nav-item"><a class="nav-link" href="chairman-speech.php">Chairman's Speech</a></li>
+                <li class="nav-item"><a class="nav-link" href="chairman-speech.php">Chairman</a></li>
                 <li class="nav-item"><a class="nav-link" href="contact.php">Contact</a></li>
                 <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
-                <li class="nav-item"><a class="nav-link" href="location.php">Location</a></li>
             </ul>
+            <button id="darkModeToggle" class="dark-toggle ms-2"><i class="fas fa-moon"></i></button>
         </div>
     </div>
 </nav>
 
 <main>
-    <!-- 1. Fullscreen Slider Section -->
-    <section class="fullscreen-slider">
+    <!-- Hero Slider - full screen on mobile -->
+    <section class="hero-slider">
         <div class="swiper heroSwiper">
             <div class="swiper-wrapper">
                 <?php foreach($sliders as $slide): ?>
-                <div class="swiper-slide" style="background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('<?php echo htmlspecialchars($slide['image_url']); ?>');">
-                    <div class="slide-content container">
-                        <h1 class="slide-title"><?php echo htmlspecialchars($slide['title']); ?></h1>
-                        <p class="slide-subtitle"><?php echo htmlspecialchars($slide['subtitle']); ?></p>
+                <div class="swiper-slide">
+                    <img src="<?php echo htmlspecialchars($slide['image_url']); ?>" class="slide-bg" alt="slide">
+                    <div class="hero-content container d-flex flex-column justify-content-center h-100">
+                        <h1 class="hero-title"><?php echo htmlspecialchars($slide['title']); ?></h1>
+                        <p class="fs-4"><?php echo htmlspecialchars($slide['subtitle']); ?></p>
                         <?php if($slide['button_text']): ?>
-                        <a href="<?php echo htmlspecialchars($slide['button_link']); ?>" class="btn btn-primary btn-lg"><?php echo htmlspecialchars($slide['button_text']); ?></a>
+                        <div><a href="<?php echo htmlspecialchars($slide['button_link']); ?>" class="btn btn-primary-custom mt-3"><?php echo htmlspecialchars($slide['button_text']); ?> →</a></div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -346,23 +485,24 @@ $activeDistrictList = $pdo->query("SELECT DISTINCT district FROM customers WHERE
         </div>
     </section>
 
-    <!-- 2. Our Services Section (directly below slider) -->
-    <section class="services-section py-5">
+    <!-- Our Services (2 columns on mobile) -->
+    <section class="py-5">
         <div class="container">
             <div class="text-center mb-5">
-                <h2 class="section-title">Our Services</h2>
-                <p class="section-subtitle">Cutting-edge AR solutions for modern enterprises</p>
+                <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill">What We Do</span>
+                <h2 class="display-5 fw-bold mt-2">Our Services</h2>
+                <p class="text-muted-custom">Cutting-edge AR/VR solutions for modern enterprises</p>
             </div>
             <div class="row g-4">
                 <?php foreach($services as $service): ?>
-                <div class="col-md-6 col-lg-3">
-                    <div class="service-card text-center p-4 h-100">
-                        <div class="service-icon">
-                            <i class="<?php echo htmlspecialchars($service['icon_class']); ?>"></i>
+                <div class="col-6 col-md-6 col-lg-3 service-col">
+                    <div class="glass-card text-center">
+                        <div class="card-body">
+                            <div class="service-icon mb-3"><i class="<?php echo htmlspecialchars($service['icon_class']); ?> fa-3x"></i></div>
+                            <h4><?php echo htmlspecialchars($service['title']); ?></h4>
+                            <p class="text-muted-custom"><?php echo htmlspecialchars($service['description']); ?></p>
+                            <a href="<?php echo htmlspecialchars($service['link_url']); ?>" class="btn btn-outline-custom btn-sm">Learn More</a>
                         </div>
-                        <h4><?php echo htmlspecialchars($service['title']); ?></h4>
-                        <p><?php echo htmlspecialchars($service['description']); ?></p>
-                        <a href="<?php echo htmlspecialchars($service['link_url']); ?>" class="service-link">Learn More <i class="fas fa-arrow-right"></i></a>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -370,135 +510,171 @@ $activeDistrictList = $pdo->query("SELECT DISTINCT district FROM customers WHERE
         </div>
     </section>
 
-    <!-- 3. Featured Projects Section -->
-    <section class="projects-section bg-light py-5">
+    <!-- Our Courses (2 columns on mobile) – Images at top like featured projects -->
+    <section class="py-5" style="background: rgba(124,58,237,0.03);">
         <div class="container">
             <div class="text-center mb-5">
-                <h2 class="section-title">Featured Projects</h2>
-                <p class="section-subtitle">Real-world impact with immersive technology</p>
+                <span class="badge bg-secondary bg-opacity-10 text-secondary px-3 py-2 rounded-pill">Academy</span>
+                <h2 class="display-5 fw-bold">Master Immersive Tech</h2>
+                <p class="text-muted-custom">Expert-led courses for the future</p>
+            </div>
+            <div class="row g-4">
+                <?php foreach($courses as $course): ?>
+                <div class="col-6 col-md-6 col-lg-3 course-col">
+                    <div class="glass-card h-100 d-flex flex-column">
+                        <?php if(!empty($course['image_url'])): ?>
+                            <img src="<?php echo htmlspecialchars($course['image_url']); ?>" class="card-img-top" alt="<?php echo htmlspecialchars($course['title']); ?>">
+                        <?php else: ?>
+                            <div class="card-img-top d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, var(--primary), var(--secondary)); height: 200px;">
+                                <i class="<?php echo htmlspecialchars($course['icon_class']); ?> fa-4x text-white"></i>
+                            </div>
+                        <?php endif; ?>
+                        <div class="card-body">
+                            <h5><?php echo htmlspecialchars($course['title']); ?></h5>
+                            <div class="d-flex gap-2 my-2">
+                                <span class="badge bg-primary"><?php echo htmlspecialchars($course['level']); ?></span>
+                                <span class="badge bg-secondary"><?php echo htmlspecialchars($course['duration']); ?></span>
+                            </div>
+                            <p class="small text-muted-custom"><?php echo htmlspecialchars($course['description']); ?></p>
+                            <a href="<?php echo htmlspecialchars($course['link_url']); ?>" class="btn btn-outline-custom btn-sm mt-2">Enroll →</a>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <div class="text-center mt-5">
+                <a href="courses.php" class="btn btn-primary-custom">All Courses <i class="fas fa-arrow-right"></i></a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured Projects (2 columns on mobile) -->
+    <section class="py-5">
+        <div class="container">
+            <div class="text-center mb-5">
+                <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2 rounded-pill">Success Stories</span>
+                <h2 class="display-5 fw-bold">Featured Projects</h2>
+                <p class="text-muted-custom">Real-world impact with immersive technology</p>
             </div>
             <div class="row g-4">
                 <?php foreach($featuredProjects as $project): ?>
-                <div class="col-md-6 col-lg-4">
-                    <div class="project-card">
-                        <div class="project-img" style="background-image: url('<?php echo htmlspecialchars($project['image_url']); ?>');"></div>
-                        <div class="project-body p-3">
-                            <h4><?php echo htmlspecialchars($project['title']); ?></h4>
-                            <p class="client-name"><i class="fas fa-user-tie"></i> <?php echo htmlspecialchars($project['client']); ?></p>
-                            <p><?php echo htmlspecialchars(substr($project['description'], 0, 100)) . '...'; ?></p>
-                            <a href="portfolio.php" class="btn btn-outline-primary btn-sm">View Details</a>
+                <div class="col-6 col-md-6 col-lg-4 project-col">
+                    <div class="glass-card h-100 d-flex flex-column">
+                        <img src="<?php echo htmlspecialchars($project['image_url']); ?>" class="card-img-top" alt="<?php echo htmlspecialchars($project['title']); ?>">
+                        <div class="card-body">
+                            <h4 class="fs-5"><?php echo htmlspecialchars($project['title']); ?></h4>
+                            <p class="text-muted-custom small"><i class="fas fa-building"></i> <?php echo htmlspecialchars($project['client']); ?></p>
+                            <p class="text-muted-custom small"><?php echo substr($project['description'], 0, 70); ?>...</p>
+                            <a href="portfolio.php" class="btn btn-outline-custom btn-sm">View Details</a>
                         </div>
                     </div>
                 </div>
                 <?php endforeach; ?>
             </div>
             <div class="text-center mt-4">
-                <a href="portfolio.php" class="btn btn-primary">View All Projects <i class="fas fa-arrow-right"></i></a>
+                <a href="portfolio.php" class="btn btn-primary-custom">Browse All Projects</a>
             </div>
         </div>
     </section>
 
-    <!-- 4. Chairman Speech Preview (placed just before the Bangladesh map) -->
+    <!-- Chairman Speech -->
     <?php if($chairmanSpeech): ?>
-    <section class="chairman-preview py-5">
+    <section class="py-5" style="background: rgba(6, 182, 212, 0.03);">
         <div class="container">
-            <div class="row align-items-center">
+            <div class="row align-items-center g-5">
                 <div class="col-md-4 text-center">
-                    <img src="<?php echo htmlspecialchars($chairmanSpeech['image_url']); ?>" class="rounded-circle img-fluid shadow" style="width: 200px; height: 200px; object-fit: cover;" alt="Chairman">
+                    <img src="<?php echo htmlspecialchars($chairmanSpeech['image_url']); ?>" class="rounded-circle shadow-lg border border-3 border-primary" style="width: 180px; height: 180px; object-fit: cover;">
                 </div>
                 <div class="col-md-8">
-                    <h3>A Word from Our Chairman</h3>
-                    <p class="lead"><?php echo htmlspecialchars(substr($chairmanSpeech['speech_text'], 0, 200)) . '...'; ?></p>
-                    <a href="chairman-speech.php" class="btn btn-outline-primary">Read Full Speech <i class="fas fa-microphone-alt"></i></a>
+                    <span class="badge bg-info bg-opacity-10 text-info px-3 py-2 rounded-pill">Visionary Words</span>
+                    <h3 class="mt-2">Chairman's Message</h3>
+                    <p class="lead"><?php echo htmlspecialchars(substr($chairmanSpeech['speech_text'], 0, 220)); ?>...</p>
+                    <a href="chairman-speech.php" class="btn btn-primary-custom">Read Full Speech <i class="fas fa-microphone-alt"></i></a>
                 </div>
             </div>
         </div>
     </section>
     <?php endif; ?>
 
-    <!-- 5. Dynamic Counters Section -->
-    <section class="counters-section py-5 text-center bg-light">
+    <!-- Happy Customers Counters -->
+    <section class="py-5">
         <div class="container">
             <div class="row g-4">
                 <div class="col-md-4">
-                    <div class="counter-card p-4">
-                        <i class="fas fa-users fa-3x text-primary"></i>
+                    <div class="counter-card">
+                        <i class="fas fa-users fa-3x mb-2 text-primary"></i>
                         <h2 class="counter-num" data-target="<?php echo $totalCustomers; ?>">0</h2>
-                        <p>Happy Customers</p>
+                        <p class="mb-0 fw-semibold">Happy Customers</p>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="counter-card p-4">
-                        <i class="fas fa-globe fa-3x text-primary"></i>
+                    <div class="counter-card">
+                        <i class="fas fa-globe fa-3x mb-2 text-primary"></i>
                         <h2 class="counter-num" data-target="<?php echo $totalCountries; ?>">0</h2>
-                        <p>Countries Served</p>
+                        <p class="mb-0 fw-semibold">Countries Served</p>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="counter-card p-4">
-                        <i class="fas fa-map-marker-alt fa-3x text-primary"></i>
+                    <div class="counter-card">
+                        <i class="fas fa-map-marker-alt fa-3x mb-2 text-primary"></i>
                         <h2 class="counter-num" data-target="<?php echo $activeDistricts; ?>">0</h2>
-                        <p>Bangladeshi Districts Covered</p>
+                        <p class="mb-0 fw-semibold">Bangladeshi Districts</p>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- 6. Bangladesh Map Section (Our Reach in Bangladesh) -->
-    <section class="map-section py-5">
+    <!-- Bangladesh Map (Circle only) -->
+    <section class="py-5">
         <div class="container">
             <div class="text-center mb-4">
                 <h2>Our Reach in Bangladesh</h2>
-                <p>Divisions with active AR deployments are highlighted in <span class="text-success">green</span>.</p>
-            </div>
-            <div class="map-legend">
-                <div><span class="active"></span> Active Service Area</div>
-                <div><span class="inactive"></span> Expansion Planned</div>
+                <p><i class="fas fa-circle text-success"></i> Active AR Service Areas (Divisions)</p>
             </div>
             <div id="bangladeshMap"></div>
         </div>
     </section>
 
-    <!-- 7. Our Customers Logos Section -->
-    <section class="customers-logos py-5 bg-light">
+    <!-- Trusted by Innovators - Swiper Logo Slider Fixed Size -->
+    <section class="trusted-section py-5">
         <div class="container">
             <div class="text-center mb-5">
-                <h2>Trusted by Industry Leaders</h2>
-                <p>Our global and local partners</p>
+                <h2>Trusted by Innovators</h2>
+                <p class="text-muted-custom">Global leaders who trust our expertise</p>
             </div>
-            <div class="row g-4 justify-content-center align-items-center">
-                <?php foreach($allCustomers as $cust): ?>
-                <div class="col-6 col-md-3 col-lg-2 text-center">
-                    <div class="logo-card p-3">
-                        <img src="<?php echo htmlspecialchars($cust['logo_url']); ?>" alt="<?php echo htmlspecialchars($cust['customer_name']); ?>" class="img-fluid">
-                        <p class="mt-2 small text-muted"><?php echo htmlspecialchars($cust['customer_name']); ?></p>
+            <div class="swiper logoSlider">
+                <div class="swiper-wrapper">
+                    <?php foreach($allCustomers as $cust): ?>
+                    <div class="swiper-slide logo-swiper-slide">
+                        <div class="logo-card-fixed">
+                            <img src="<?php echo htmlspecialchars($cust['logo_url']); ?>" alt="<?php echo htmlspecialchars($cust['customer_name']); ?>">
+                        </div>
                     </div>
+                    <?php endforeach; ?>
                 </div>
-                <?php endforeach; ?>
+                <div class="swiper-pagination logo-pagination"></div>
+                <div class="swiper-button-next logo-next"></div>
+                <div class="swiper-button-prev logo-prev"></div>
             </div>
         </div>
     </section>
 
-    <!-- 8. Testimonials Section -->
-    <section class="testimonials-section py-5">
+    <!-- Client Testimonials (2 columns on mobile) -->
+    <section class="py-5">
         <div class="container">
             <div class="text-center mb-5">
-                <h2 class="section-title">Client Testimonials</h2>
-                <p class="section-subtitle">What our partners say about us</p>
+                <h2>What Our Clients Say</h2>
+                <p class="text-muted-custom">Real feedback from real partners</p>
             </div>
             <div class="row g-4">
                 <?php foreach($testimonials as $testimonial): ?>
-                <div class="col-md-4">
-                    <div class="testimonial-card p-4 h-100">
-                        <div class="testimonial-icon">
-                            <i class="fas fa-quote-left"></i>
-                        </div>
-                        <p class="testimonial-text">"<?php echo htmlspecialchars($testimonial['testimonial_text']); ?>"</p>
-                        <div class="testimonial-author">
-                            <h5><?php echo htmlspecialchars($testimonial['client_name']); ?></h5>
-                            <span><?php echo htmlspecialchars($testimonial['client_title'] . ', ' . $testimonial['company']); ?></span>
-                        </div>
+                <div class="col-6 col-md-4 testimonial-col">
+                    <div class="testimonial-card h-100">
+                        <i class="fas fa-quote-left fa-2x text-primary mb-3 opacity-50"></i>
+                        <p class="fst-italic small">"<?php echo htmlspecialchars($testimonial['testimonial_text']); ?>"</p>
+                        <h5 class="mt-3 mb-0 fs-6"><?php echo htmlspecialchars($testimonial['client_name']); ?></h5>
+                        <small class="text-muted-custom"><?php echo htmlspecialchars($testimonial['client_title'] . ', ' . $testimonial['company']); ?></small>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -506,12 +682,12 @@ $activeDistrictList = $pdo->query("SELECT DISTINCT district FROM customers WHERE
         </div>
     </section>
 
-    <!-- 9. Quick Contact Call to Action -->
-    <section class="cta-section py-5 text-center text-white">
-        <div class="container">
-            <h3 class="mb-3">Ready to Transform Your Business with AR?</h3>
-            <p class="mb-4">Let's discuss your next immersive project.</p>
-            <a href="contact.php" class="btn btn-light btn-lg">Get in Touch <i class="fas fa-paper-plane"></i></a>
+    <!-- CTA -->
+    <section class="container py-4">
+        <div class="cta-modern">
+            <h2 class="fw-bold">Ready to Transform Your Business?</h2>
+            <p class="mb-4 fs-5">Let's discuss your next immersive project.</p>
+            <a href="contact.php" class="btn btn-light btn-lg rounded-pill px-5">Get in Touch <i class="fas fa-paper-plane ms-2"></i></a>
         </div>
     </section>
 </main>
@@ -520,55 +696,84 @@ $activeDistrictList = $pdo->query("SELECT DISTINCT district FROM customers WHERE
 <footer>
     <div class="container">
         <div class="row">
-            <div class="col-md-4 mb-3">
-                <h5><i class="fas fa-vr-cardboard"></i> AR Tech Solutions</h5>
-                <p>Augmenting reality with precision and innovation. Transforming industries with immersive tech.</p>
+            <div class="col-md-4 mb-4">
+                <h5 class="fw-bold"><i class="fas fa-vr-cardboard me-2"></i>ARTECH</h5>
+                <p class="text-muted">Augmenting reality with precision and innovation.</p>
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-md-4 mb-4">
                 <h5>Quick Links</h5>
                 <ul class="list-unstyled">
-                    <li><a href="index.php" class="text-white-50 text-decoration-none">Home</a></li>
-                    <li><a href="portfolio.php" class="text-white-50 text-decoration-none">Portfolio</a></li>
-                    <li><a href="chairman-speech.php" class="text-white-50 text-decoration-none">Chairman's Speech</a></li>
-                    <li><a href="contact.php" class="text-white-50 text-decoration-none">Contact</a></li>
+                    <li><a href="index.php">Home</a></li>
+                    <li><a href="portfolio.php">Portfolio</a></li>
+                    <li><a href="courses.php">Courses</a></li>
+                    <li><a href="contact.php">Contact</a></li>
                 </ul>
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-md-4 mb-4">
                 <h5>Connect</h5>
-                <p><i class="fas fa-envelope"></i> hello@artechsolutions.com</p>
-                <p><i class="fas fa-phone"></i> +1 (823) 456-5588</p>
-                <div class="social-icons">
-                    <a href="#" class="text-white me-3"><i class="fab fa-linkedin fa-lg"></i></a>
-                    <a href="#" class="text-white me-3"><i class="fab fa-twitter fa-lg"></i></a>
-                    <a href="#" class="text-white"><i class="fab fa-github fa-lg"></i></a>
-                </div>
+                <p><i class="fas fa-envelope me-2"></i> hello@artechsolutions.com</p>
+                <p><i class="fas fa-phone me-2"></i> +1 (823) 456-5588</p>
+                <p><i class="fas fa-map-marker-alt me-2"></i> 123 AR Avenue, Tech Valley</p>
             </div>
         </div>
-        <hr class="bg-secondary">
-        <div class="text-center">
-            <small>&copy; <?php echo date('Y'); ?> AR Tech Solutions. All rights reserved.</small>
-        </div>
+        <hr class="opacity-25">
+        <div class="text-center small">&copy; <?php echo date('Y'); ?> AR Tech Solutions. All rights reserved.</div>
     </div>
 </footer>
+
+<!-- Floating Message Icon -->
+<div class="floating-msg" id="floatingMsg">
+    <i class="fas fa-comment-dots"></i>
+</div>
+
+<!-- Back to Top -->
+<div class="back-to-top" id="backToTop">
+    <i class="fas fa-arrow-up"></i>
+</div>
 
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <script>
-    // Initialize Swiper (fullscreen slider)
-    const swiper = new Swiper('.heroSwiper', {
+    // Set full screen height for hero on mobile
+    function setFullHeight() {
+        const hero = document.querySelector('.hero-slider');
+        if (hero) {
+            if (window.innerHeight) {
+                hero.style.height = window.innerHeight + 'px';
+            }
+        }
+    }
+    window.addEventListener('resize', setFullHeight);
+    setFullHeight();
+
+    // Hero Slider
+    new Swiper('.heroSwiper', {
         loop: true,
         autoplay: { delay: 5000, disableOnInteraction: false },
         effect: 'fade',
-        fadeEffect: { crossFade: true },
         pagination: { el: '.swiper-pagination', clickable: true },
         navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' }
     });
 
-    // Animate counters when they come into view
-    function animateCounters() {
+    // Logo Slider (Trusted by Innovators)
+    new Swiper('.logoSlider', {
+        slidesPerView: 2,
+        spaceBetween: 15,
+        loop: true,
+        autoplay: { delay: 2500, disableOnInteraction: false },
+        breakpoints: {
+            576: { slidesPerView: 3 },
+            768: { slidesPerView: 4 },
+            1024: { slidesPerView: 6 }
+        },
+        pagination: { el: '.logo-pagination', clickable: true },
+        navigation: { nextEl: '.logo-next', prevEl: '.logo-prev' }
+    });
+
+    // Counters Observer
+    function initCounters() {
         const counters = document.querySelectorAll('.counter-num');
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
@@ -577,91 +782,120 @@ $activeDistrictList = $pdo->query("SELECT DISTINCT district FROM customers WHERE
                     const target = parseInt(counter.getAttribute('data-target'));
                     let current = 0;
                     const increment = target / 50;
-                    const updateCounter = () => {
+                    const update = () => {
                         current += increment;
                         if (current < target) {
                             counter.innerText = Math.ceil(current);
-                            requestAnimationFrame(updateCounter);
+                            requestAnimationFrame(update);
                         } else {
                             counter.innerText = target;
                         }
                     };
-                    updateCounter();
+                    update();
                     observer.unobserve(counter);
                 }
             });
         }, { threshold: 0.5 });
-        counters.forEach(counter => observer.observe(counter));
+        counters.forEach(c => observer.observe(c));
     }
 
-    // Bangladesh Map with Leaflet (only Bangladesh map)
-    function initBangladeshMap() {
-        // Active divisions from PHP (list of districts with customers)
-        const activeDivisions = <?php echo json_encode($activeDistrictList); ?>;
-
-        // GeoJSON for Bangladesh divisions (simplified but visually coherent)
-        const bangladeshGeoJSON = {
-            "type": "FeatureCollection",
-            "features": [
-                {"type":"Feature","properties":{"name":"Dhaka"},"geometry":{"type":"Polygon","coordinates":[[[89.8,24.8],[90.9,24.8],[91.0,23.8],[89.9,23.5],[89.5,24.0],[89.8,24.8]]]}},
-                {"type":"Feature","properties":{"name":"Chattogram"},"geometry":{"type":"Polygon","coordinates":[[[91.2,23.4],[92.4,23.1],[92.6,21.8],[91.4,21.6],[90.8,22.3],[91.2,23.4]]]}},
-                {"type":"Feature","properties":{"name":"Rajshahi"},"geometry":{"type":"Polygon","coordinates":[[[88.0,25.1],[89.2,25.2],[89.5,24.5],[88.5,24.2],[87.9,24.6],[88.0,25.1]]]}},
-                {"type":"Feature","properties":{"name":"Khulna"},"geometry":{"type":"Polygon","coordinates":[[[88.8,22.9],[89.7,22.8],[89.9,22.0],[88.9,21.9],[88.2,22.5],[88.8,22.9]]]}},
-                {"type":"Feature","properties":{"name":"Sylhet"},"geometry":{"type":"Polygon","coordinates":[[[91.3,25.1],[92.4,25.2],[92.6,24.4],[91.7,24.2],[91.0,24.5],[91.3,25.1]]]}},
-                {"type":"Feature","properties":{"name":"Barishal"},"geometry":{"type":"Polygon","coordinates":[[[89.9,22.8],[90.7,22.7],[90.9,21.9],[89.8,21.9],[89.4,22.3],[89.9,22.8]]]}},
-                {"type":"Feature","properties":{"name":"Rangpur"},"geometry":{"type":"Polygon","coordinates":[[[88.3,26.3],[89.6,26.4],[89.8,25.6],[88.6,25.5],[88.0,25.9],[88.3,26.3]]]}},
-                {"type":"Feature","properties":{"name":"Mymensingh"},"geometry":{"type":"Polygon","coordinates":[[[89.9,25.2],[91.0,25.1],[91.1,24.3],[90.0,24.2],[89.5,24.7],[89.9,25.2]]]}}
-            ]
-        };
-
-        const map = L.map('bangladeshMap').setView([23.8, 90.3], 7.2);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; CARTO'
+    // Bangladesh Map
+    let map;
+    function initMap() {
+        const activeDivisions = <?php echo json_encode($activeDivisions); ?>;
+        const coords = <?php echo json_encode($divisionCoordinates); ?>;
+        const isDark = document.body.classList.contains('dark');
+        const tileUrl = isDark ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        
+        map = L.map('bangladeshMap').setView([23.8, 90.3], 7.2);
+        L.tileLayer(tileUrl, {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors'
         }).addTo(map);
 
-        function getFeatureStyle(feature) {
-            const isActive = activeDivisions.includes(feature.properties.name);
-            return {
-                fillColor: isActive ? '#2ecc71' : '#d3d3d3',
-                weight: 1.5,
-                color: '#ffffff',
-                fillOpacity: 0.75
-            };
-        }
-
-        function onEachFeature(feature, layer) {
-            const isActive = activeDivisions.includes(feature.properties.name);
-            const status = isActive ? '✅ Active (AR services deployed)' : '⏳ Coming soon';
-            layer.bindPopup(`<b>${feature.properties.name} Division</b><br>${status}`);
-        }
-
-        L.geoJSON(bangladeshGeoJSON, {
-            style: getFeatureStyle,
-            onEachFeature: onEachFeature
-        }).addTo(map);
-
-        // Marker for capital city
-        L.circleMarker([23.8103, 90.4125], { radius: 5, fillColor: "#e67e22", color: "#fff", weight: 1.5, fillOpacity: 0.9 })
-            .addTo(map)
-            .bindPopup("<b>Dhaka</b><br>Head Office");
-
-        map.invalidateSize();
-    }
-
-    // Run after DOM ready
-    document.addEventListener('DOMContentLoaded', function() {
-        animateCounters();
-        initBangladeshMap();
-
-        // Navbar scroll effect
-        window.addEventListener('scroll', function() {
-            const navbar = document.querySelector('.main-navbar');
-            if (window.scrollY > 50) {
-                navbar.style.background = 'rgba(10, 11, 16, 0.98)';
-            } else {
-                navbar.style.background = 'rgba(10, 11, 16, 0.85)';
+        activeDivisions.forEach(division => {
+            if (coords[division]) {
+                const [lat, lng] = coords[division];
+                L.circleMarker([lat, lng], {
+                    radius: 15,
+                    fillColor: "#10b981",
+                    color: "#ffffff",
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.85
+                }).addTo(map)
+                  .bindPopup(`<b>${division} Division</b><br>✅ Active AR Service Area`);
             }
         });
+    }
+
+    function updateMapTiles() {
+        if (!map) return;
+        const isDark = document.body.classList.contains('dark');
+        const newTileUrl = isDark ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        map.eachLayer(layer => {
+            if (layer instanceof L.TileLayer) {
+                map.removeLayer(layer);
+            }
+        });
+        L.tileLayer(newTileUrl, {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors'
+        }).addTo(map);
+    }
+
+    // Dark Mode Toggle
+    function initDarkMode() {
+        const toggleBtn = document.getElementById('darkModeToggle');
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            document.body.classList.add('dark');
+            toggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+        } else {
+            toggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
+        }
+        toggleBtn.addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+            const isDark = document.body.classList.contains('dark');
+            localStorage.setItem('darkMode', isDark ? 'enabled' : 'disabled');
+            toggleBtn.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            updateMapTiles();
+        });
+    }
+
+    // Navbar Scroll Effect
+    function initNavbarScroll() {
+        const navbar = document.querySelector('.glass-nav');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+    }
+
+    // Back to Top
+    function initBackToTop() {
+        const btn = document.getElementById('backToTop');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) btn.classList.add('show');
+            else btn.classList.remove('show');
+        });
+        btn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
+    // Floating Message Alert
+    document.getElementById('floatingMsg')?.addEventListener('click', () => {
+        alert('Live chat support coming soon! 📱');
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initCounters();
+        initMap();
+        initDarkMode();
+        initNavbarScroll();
+        initBackToTop();
+        setFullHeight();
     });
 </script>
 </body>

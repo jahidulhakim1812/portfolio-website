@@ -1,22 +1,16 @@
 <?php
-// chairman-speech.php - Full page with chairman speech and team members with search
+// services.php - Display all services from database
 require_once 'config.php';
 
-// Fetch active chairman speech
-$speech = $pdo->query("SELECT * FROM chairman_speech WHERE is_active = 1 LIMIT 1")->fetch();
-if (!$speech) {
-    die("Chairman speech not found.");
-}
-
-// Fetch active team members ordered by position
-$teamMembers = $pdo->query("SELECT * FROM team_members WHERE is_active = 1 ORDER BY order_position ASC")->fetchAll();
+// Fetch all services ordered by ID
+$services = $pdo->query("SELECT * FROM services ORDER BY id ASC")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>AR Tech Solutions | Chairman's Speech</title>
+    <title>AR Tech Solutions | Our Services</title>
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700;14..32,800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Bootstrap 5 CSS -->
@@ -61,7 +55,7 @@ $teamMembers = $pdo->query("SELECT * FROM team_members WHERE is_active = 1 ORDER
             font-family: 'Space Grotesk', sans-serif;
             font-weight: 700;
         }
-        /* Navbar exactly as requested */
+        /* Navbar exactly as reference */
         .glass-nav {
             position: relative;
             top: 0;
@@ -142,118 +136,28 @@ $teamMembers = $pdo->query("SELECT * FROM team_members WHERE is_active = 1 ORDER
         body.dark .page-hero {
             background: var(--surface-dark);
         }
-        /* Chairman Speech Card */
-        .speech-card {
-            background: var(--surface-light);
-            border-radius: 32px;
-            padding: 2rem;
-            border: 1px solid var(--border-light);
-            box-shadow: var(--shadow);
-        }
-        body.dark .speech-card {
-            background: var(--surface-dark);
-        }
-        .speech-text {
-            font-size: 1.2rem;
-            line-height: 1.8;
-            color: var(--text-light);
-        }
-        body.dark .speech-text {
-            color: var(--text-dark);
-        }
-        /* Search Container */
-        .search-container {
-            max-width: 400px;
-            margin: 0 auto 2rem auto;
-            position: relative;
-        }
-        .search-input {
-            width: 100%;
-            padding: 0.8rem 1rem 0.8rem 2.8rem;
-            border-radius: 60px;
-            border: 1px solid var(--border-light);
-            background: var(--bg-light);
-            color: var(--text-light);
-            font-size: 0.95rem;
-            box-shadow: var(--shadow);
-            transition: all 0.3s;
-        }
-        body.dark .search-input {
-            background: var(--surface-dark);
-            border-color: var(--border-dark);
-            color: var(--text-dark);
-        }
-        .search-input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
-        }
-        .search-icon {
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-muted-light);
-            font-size: 0.9rem;
-        }
-        body.dark .search-icon {
-            color: var(--text-muted-dark);
-        }
-        .clear-search {
-            position: absolute;
-            right: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: pointer;
-            color: var(--text-muted-light);
-            display: none;
-        }
-        .clear-search:hover {
-            color: var(--primary);
-        }
-        /* Team Cards */
-        .team-card {
+        /* Service Cards (identical to homepage) */
+        .service-card {
             background: var(--surface-light);
             border-radius: 28px;
             border: 1px solid var(--border-light);
             transition: all 0.3s;
-            overflow: hidden;
+            padding: 1.8rem;
             height: 100%;
             text-align: center;
-            padding: 1.8rem;
             box-shadow: var(--shadow);
         }
-        body.dark .team-card {
+        body.dark .service-card {
             background: var(--surface-dark);
             border-color: var(--border-dark);
         }
-        .team-card:hover {
+        .service-card:hover {
             transform: translateY(-8px);
             box-shadow: 0 20px 30px -12px rgba(0, 0, 0, 0.2);
         }
-        .team-img {
-            width: 140px;
-            height: 140px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin-bottom: 1rem;
-            border: 3px solid var(--primary);
-        }
-        .social-icons a {
-            color: var(--text-muted-light);
-            margin: 0 0.5rem;
-            font-size: 1.2rem;
-            transition: 0.2s;
-        }
-        body.dark .social-icons a {
-            color: var(--text-muted-dark);
-        }
-        .social-icons a:hover {
+        .service-icon i {
+            font-size: 2.8rem;
             color: var(--primary);
-        }
-        .no-results {
-            text-align: center;
-            padding: 2rem;
         }
         /* Footer */
         footer {
@@ -313,6 +217,7 @@ $teamMembers = $pdo->query("SELECT * FROM team_members WHERE is_active = 1 ORDER
             color: white;
         }
         .back-to-top.show { opacity: 1; }
+        /* Responsive Grid */
         @media (max-width: 768px) {
             .navbar-collapse {
                 background: rgba(255,255,255,0.95);
@@ -323,12 +228,9 @@ $teamMembers = $pdo->query("SELECT * FROM team_members WHERE is_active = 1 ORDER
             body.dark .navbar-collapse {
                 background: rgba(20,20,30,0.95);
             }
-            .team-col {
+            .service-col {
                 flex: 0 0 50%;
                 max-width: 50%;
-            }
-            .search-container {
-                width: 90%;
             }
         }
         .text-muted-custom {
@@ -336,6 +238,29 @@ $teamMembers = $pdo->query("SELECT * FROM team_members WHERE is_active = 1 ORDER
         }
         body.dark .text-muted-custom {
             color: var(--text-muted-dark);
+        }
+        .btn-outline-custom {
+            border: 2px solid var(--primary);
+            background: transparent;
+            border-radius: 40px;
+            padding: 8px 24px;
+            color: var(--primary);
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            transition: 0.2s;
+        }
+        body.dark .btn-outline-custom {
+            color: var(--secondary);
+            border-color: var(--secondary);
+        }
+        .btn-outline-custom:hover {
+            background: var(--primary);
+            color: white;
+        }
+        body.dark .btn-outline-custom:hover {
+            background: var(--secondary);
+            color: var(--bg-dark);
         }
     </style>
 </head>
@@ -352,7 +277,8 @@ $teamMembers = $pdo->query("SELECT * FROM team_members WHERE is_active = 1 ORDER
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item"><a class="nav-link" href="index.php">Home</a></li>
                 <li class="nav-item"><a class="nav-link" href="portfolio.php">Portfolio</a></li>
-                <li class="nav-item"><a class="nav-link active" href="chairman-speech.php">Chairman</a></li>
+                <li class="nav-item"><a class="nav-link" href="chairman-speech.php">Chairman</a></li>
+                <li class="nav-item"><a class="nav-link active" href="services.php">Services</a></li>
                 <li class="nav-item"><a class="nav-link" href="contact.php">Contact</a></li>
                 <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
             </ul>
@@ -362,89 +288,43 @@ $teamMembers = $pdo->query("SELECT * FROM team_members WHERE is_active = 1 ORDER
 </nav>
 
 <main>
-    <!-- Hero -->
+    <!-- Hero Section -->
     <section class="page-hero">
         <div class="container">
-            <h1 class="display-4 fw-bold">Chairman's Speech</h1>
-            <p class="lead text-muted-custom">Vision, Mission & the Road Ahead</p>
+            <h1 class="display-4 fw-bold">Our Services</h1>
+            <p class="lead text-muted-custom">Cutting-edge AR/VR solutions for modern enterprises</p>
         </div>
     </section>
 
-    <!-- Chairman Speech Content -->
+    <!-- Services Grid -->
     <section class="py-5">
         <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-lg-10">
-                    <div class="speech-card">
-                        <div class="text-center mb-4">
-                            <img src="<?php echo htmlspecialchars($speech['image_url']); ?>" class="rounded-circle shadow-lg border border-3 border-primary" style="width: 150px; height: 150px; object-fit: cover;">
-                            <h3 class="mt-3"><?php echo htmlspecialchars($speech['chairman_name'] ?? 'Chairman'); ?></h3>
-                            <p class="text-muted-custom"><?php echo htmlspecialchars($speech['title'] ?? 'Chairman & Founder'); ?></p>
-                        </div>
-                        <div class="speech-text">
-                            <?php echo nl2br(htmlspecialchars($speech['speech_text'])); ?>
-                        </div>
-                        <?php if(!empty($speech['signature_url'])): ?>
-                        <div class="text-end mt-5">
-                            <img src="<?php echo htmlspecialchars($speech['signature_url']); ?>" style="max-width: 200px;" alt="Signature">
-                            <p class="mt-2 mb-0"><?php echo htmlspecialchars($speech['chairman_name'] ?? 'Chairman'); ?></p>
-                        </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Team Introduction Section with Search -->
-    <?php if(count($teamMembers) > 0): ?>
-    <section class="py-5" style="background: rgba(124,58,237,0.03);">
-        <div class="container">
-            <div class="text-center mb-4">
-                <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill">Leadership & Team</span>
-                <h2 class="display-5 fw-bold mt-2">Meet Our Team</h2>
-                <p class="text-muted-custom">The brilliant minds behind our immersive innovations</p>
-            </div>
-            
-            <!-- Search Input -->
-            <div class="search-container">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" id="teamSearchInput" class="search-input" placeholder="Search by name, position or bio...">
-                <i class="fas fa-times-circle clear-search" id="clearTeamSearch"></i>
-            </div>
-
-            <!-- Team Grid -->
-            <div class="row g-4" id="teamGrid">
-                <?php foreach($teamMembers as $member): ?>
-                <div class="col-6 col-md-4 col-lg-3 team-col" data-name="<?php echo strtolower(htmlspecialchars($member['name'])); ?>" data-position="<?php echo strtolower(htmlspecialchars($member['position'])); ?>" data-bio="<?php echo strtolower(htmlspecialchars($member['bio'])); ?>">
-                    <div class="team-card">
-                        <img src="<?php echo htmlspecialchars($member['image_url']); ?>" class="team-img" alt="<?php echo htmlspecialchars($member['name']); ?>">
-                        <h4 class="fs-5 mb-1"><?php echo htmlspecialchars($member['name']); ?></h4>
-                        <p class="text-muted-custom small"><?php echo htmlspecialchars($member['position']); ?></p>
-                        <p class="small mt-2"><?php echo htmlspecialchars($member['bio']); ?></p>
-                        <div class="social-icons mt-3">
-                            <?php if(!empty($member['social_facebook'])): ?>
-                            <a href="<?php echo htmlspecialchars($member['social_facebook']); ?>" target="_blank"><i class="fab fa-facebook-f"></i></a>
-                            <?php endif; ?>
-                            <?php if(!empty($member['social_twitter'])): ?>
-                            <a href="<?php echo htmlspecialchars($member['social_twitter']); ?>" target="_blank"><i class="fab fa-twitter"></i></a>
-                            <?php endif; ?>
-                            <?php if(!empty($member['social_linkedin'])): ?>
-                            <a href="<?php echo htmlspecialchars($member['social_linkedin']); ?>" target="_blank"><i class="fab fa-linkedin-in"></i></a>
+            <div class="row g-4">
+                <?php if(count($services) > 0): ?>
+                    <?php foreach($services as $service): ?>
+                    <div class="col-6 col-md-6 col-lg-3 service-col">
+                        <div class="service-card">
+                            <div class="service-icon mb-3">
+                                <i class="<?php echo htmlspecialchars($service['icon_class']); ?> fa-3x"></i>
+                            </div>
+                            <h4 class="fs-5 fw-bold"><?php echo htmlspecialchars($service['title']); ?></h4>
+                            <p class="text-muted-custom small"><?php echo htmlspecialchars($service['description']); ?></p>
+                            <?php if(!empty($service['link_url'])): ?>
+                            <a href="<?php echo htmlspecialchars($service['link_url']); ?>" class="btn-outline-custom btn-sm mt-2">Learn More →</a>
                             <?php endif; ?>
                         </div>
                     </div>
-                </div>
-                <?php endforeach; ?>
-            </div>
-            <div id="teamNoResults" class="no-results" style="display: none;">
-                <i class="fas fa-user-friends fa-3x text-muted-custom mb-3"></i>
-                <h4>No team members found</h4>
-                <p>Try a different search term.</p>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-cogs fa-4x text-muted-custom mb-3"></i>
+                        <h3>No services available</h3>
+                        <p>Check back soon for our service offerings.</p>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </section>
-    <?php endif; ?>
 </main>
 
 <!-- Footer -->
@@ -460,7 +340,7 @@ $teamMembers = $pdo->query("SELECT * FROM team_members WHERE is_active = 1 ORDER
                 <ul class="list-unstyled">
                     <li><a href="index.php">Home</a></li>
                     <li><a href="portfolio.php">Portfolio</a></li>
-                    <li><a href="chairman-speech.php">Chairman</a></li>
+                    <li><a href="services.php">Services</a></li>
                     <li><a href="contact.php">Contact</a></li>
                 </ul>
             </div>
@@ -488,47 +368,6 @@ $teamMembers = $pdo->query("SELECT * FROM team_members WHERE is_active = 1 ORDER
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Team Search Functionality
-    const teamSearchInput = document.getElementById('teamSearchInput');
-    const clearTeamSearch = document.getElementById('clearTeamSearch');
-    const teamCards = document.querySelectorAll('.team-col');
-    const teamGrid = document.getElementById('teamGrid');
-    const teamNoResults = document.getElementById('teamNoResults');
-
-    function filterTeam() {
-        const query = teamSearchInput.value.toLowerCase().trim();
-        let hasResults = false;
-
-        teamCards.forEach(card => {
-            const name = card.getAttribute('data-name') || '';
-            const position = card.getAttribute('data-position') || '';
-            const bio = card.getAttribute('data-bio') || '';
-            if (name.includes(query) || position.includes(query) || bio.includes(query)) {
-                card.style.display = '';
-                hasResults = true;
-            } else {
-                card.style.display = 'none';
-            }
-        });
-
-        if (hasResults) {
-            teamNoResults.style.display = 'none';
-        } else {
-            teamNoResults.style.display = 'block';
-        }
-
-        clearTeamSearch.style.display = query.length > 0 ? 'block' : 'none';
-    }
-
-    if (teamSearchInput) {
-        teamSearchInput.addEventListener('input', filterTeam);
-        clearTeamSearch.addEventListener('click', () => {
-            teamSearchInput.value = '';
-            filterTeam();
-            teamSearchInput.focus();
-        });
-    }
-
     // Dark Mode Toggle
     function initDarkMode() {
         const toggleBtn = document.getElementById('darkModeToggle');
