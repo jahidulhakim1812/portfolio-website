@@ -1,9 +1,9 @@
 <?php
-// portfolio.php - Show all projects with search functionality, navbar exactly as in reference image
+// portfolio.php - Show all projects with search, navbar and footer identical to index.php
 require_once 'config.php';
 
 // Fetch all portfolio items
-$portfolioItems = $pdo->query("SELECT * FROM portfolios ORDER BY id DESC")->fetchAll();
+$portfolioItems = $pdo->query("SELECT * FROM portfolios WHERE status = 1 ORDER BY order_position ASC, id DESC")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -55,7 +55,7 @@ $portfolioItems = $pdo->query("SELECT * FROM portfolios ORDER BY id DESC")->fetc
             font-family: 'Space Grotesk', sans-serif;
             font-weight: 700;
         }
-        /* Navbar - exactly as reference image (ARTECH brand without icon) */
+        /* Navbar - IDENTICAL TO INDEX.PHP (with icon) */
         .glass-nav {
             position: relative;
             top: 0;
@@ -80,7 +80,6 @@ $portfolioItems = $pdo->query("SELECT * FROM portfolios ORDER BY id DESC")->fetc
         body.dark .glass-nav.scrolled {
             background: rgba(10, 10, 15, 0.98);
         }
-        /* Brand text only, no icon */
         .navbar-brand {
             font-size: 1.6rem;
             font-weight: 800;
@@ -88,7 +87,6 @@ $portfolioItems = $pdo->query("SELECT * FROM portfolios ORDER BY id DESC")->fetc
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            letter-spacing: -0.5px;
         }
         .nav-link {
             font-weight: 600;
@@ -127,7 +125,7 @@ $portfolioItems = $pdo->query("SELECT * FROM portfolios ORDER BY id DESC")->fetc
             background: rgba(124, 58, 237, 0.3);
             color: var(--secondary);
         }
-        /* Page Hero - Only "Our Portfolio" text */
+        /* Page Hero */
         .page-hero {
             background: var(--surface-light);
             padding: 3rem 0 2rem;
@@ -214,7 +212,7 @@ $portfolioItems = $pdo->query("SELECT * FROM portfolios ORDER BY id DESC")->fetc
             text-align: center;
             padding: 3rem;
         }
-        /* Footer */
+        /* Footer - IDENTICAL TO INDEX.PHP */
         footer {
             background: #0f172a;
             color: #cbd5e1;
@@ -231,7 +229,10 @@ $portfolioItems = $pdo->query("SELECT * FROM portfolios ORDER BY id DESC")->fetc
         footer a:hover {
             color: var(--secondary);
         }
-        /* Floating message icon */
+          footer .text-muted {
+            color: white !important;
+        }
+        /* Floating message icon (same as index) */
         .floating-msg {
             position: fixed;
             bottom: 30px;
@@ -303,10 +304,10 @@ $portfolioItems = $pdo->query("SELECT * FROM portfolios ORDER BY id DESC")->fetc
 </head>
 <body>
 
-<!-- Navbar - Exactly as reference image: ARTECH brand (no icon) + links: Home, Portfolio, Chairman, Contact, About -->
+<!-- Navbar - IDENTICAL TO INDEX.PHP (with icon, same links) -->
 <nav class="navbar navbar-expand-lg glass-nav" id="mainNavbar">
     <div class="container">
-        <a class="navbar-brand" href="index.php">ARTECH</a>
+        <a class="navbar-brand" href="index.php"><i class="fas fa-vr-cardboard me-2"></i>ARTECH</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -324,7 +325,7 @@ $portfolioItems = $pdo->query("SELECT * FROM portfolios ORDER BY id DESC")->fetc
 </nav>
 
 <main>
-    <!-- Hero Section - Only "Our Portfolio" text -->
+    <!-- Hero Section -->
     <section class="page-hero">
         <div class="container">
             <h1 class="display-4 fw-bold">Our Portfolio</h1>
@@ -372,36 +373,9 @@ $portfolioItems = $pdo->query("SELECT * FROM portfolios ORDER BY id DESC")->fetc
     </section>
 </main>
 
-<!-- Footer -->
-<footer>
-    <div class="container">
-        <div class="row">
-            <div class="col-md-4 mb-4">
-                <h5 class="fw-bold">ARTECH</h5>
-                <p class="text-muted">Augmenting reality with precision and innovation.</p>
-            </div>
-            <div class="col-md-4 mb-4">
-                <h5>Quick Links</h5>
-                <ul class="list-unstyled">
-                    <li><a href="index.php">Home</a></li>
-                    <li><a href="portfolio.php">Portfolio</a></li>
-                    <li><a href="courses.php">Courses</a></li>
-                    <li><a href="contact.php">Contact</a></li>
-                </ul>
-            </div>
-            <div class="col-md-4 mb-4">
-                <h5>Connect</h5>
-                <p><i class="fas fa-envelope me-2"></i> hello@artechsolutions.com</p>
-                <p><i class="fas fa-phone me-2"></i> +1 (823) 456-5588</p>
-                <p><i class="fas fa-map-marker-alt me-2"></i> 123 AR Avenue, Tech Valley</p>
-            </div>
-        </div>
-        <hr class="opacity-25">
-        <div class="text-center small">&copy; <?php echo date('Y'); ?> AR Tech Solutions. All rights reserved.</div>
-    </div>
-</footer>
+<?php include 'footer.php'; ?>
 
-<!-- Floating Message Icon -->
+<!-- Floating Message Icon (same as index) -->
 <div class="floating-msg" id="floatingMsg">
     <i class="fas fa-comment-dots"></i>
 </div>

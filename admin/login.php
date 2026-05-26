@@ -1,5 +1,5 @@
 <?php
-// admin/login.php - Updated with white subtitle and forgot password option
+// admin/login.php - Updated with white subtitle, forgot password, and custom logo
 require_once '../config.php';
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -103,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             50% { transform: translateY(-10px); }
             100% { transform: translateY(0px); }
         }
-        /* Logo pop animation */
+        /* Logo wrapper with image support */
         .logo-wrapper {
             width: 90px;
             height: 90px;
@@ -115,6 +115,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin: 0 auto 1rem;
             animation: popBounce 0.7s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
             box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .logo-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
         .logo-wrapper i {
             font-size: 2.8rem;
@@ -252,7 +258,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="login-card">
         <div class="text-center">
             <div class="logo-wrapper">
-           
+                <img src="../uploads/logo.jpg" 
+                     alt="Logo" 
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <i class="fas fa-vr-cardboard" style="display: none;"></i>
             </div>
             <h3 class="mt-3">Admin Portal</h3>
             <p class="admin-subtitle">Secure access to dashboard</p>
@@ -314,6 +323,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             e.preventDefault();
             alert('Please contact the system administrator to reset your password.\n\nDemo mode: For local testing, use username: admin, password: admin123');
         });
+        // Fallback: show icon if image fails to load
+        const logoImg = document.querySelector('.logo-wrapper img');
+        const logoIcon = document.querySelector('.logo-wrapper i');
+        if (logoImg && logoImg.complete && logoImg.naturalWidth === 0) {
+            logoImg.style.display = 'none';
+            logoIcon.style.display = 'flex';
+        }
         document.addEventListener('DOMContentLoaded', initDarkMode);
     </script>
 </body>
