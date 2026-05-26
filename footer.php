@@ -13,6 +13,7 @@
                     <li><a href="portfolio.php">Portfolio</a></li>
                     <li><a href="courses.php">Courses</a></li>
                     <li><a href="contact.php">Contact</a></li>
+                     <li><a href="admin/login.php">Account</a></li>
                 </ul>
             </div>
             <div class="col-md-4 mb-4">
