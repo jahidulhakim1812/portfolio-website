@@ -1,5 +1,5 @@
 <?php
-// admin/manage_courses.php - Complete course management with working add/update
+// admin/manage_courses.php - Full course management with JSON curriculum
 require_once 'auth.php';
 require_once '../config.php';
 
@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         if ($curriculum === '') {
             return '{"modules":[]}';
         }
+        // Validate JSON
         json_decode($curriculum);
         if (json_last_error() !== JSON_ERROR_NONE) {
             return '{"modules":[]}';
@@ -106,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         exit;
     }
 
-    // UPLOAD IMAGES
+    // UPLOAD IMAGES (unchanged)
     if ($action === 'upload_image') {
         if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
             $uploadDir = '../uploads/courses/';
@@ -169,7 +170,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
     }
 }
 
-// Fetch all courses
 $courses = $pdo->query("SELECT * FROM courses ORDER BY id DESC")->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -182,6 +182,7 @@ $courses = $pdo->query("SELECT * FROM courses ORDER BY id DESC")->fetchAll();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
+        /* Same CSS as previous version – include all styles for sidebar, table, etc. */
         :root {
             --bg: #050816;
             --panel: #0f172a;
@@ -292,25 +293,7 @@ $courses = $pdo->query("SELECT * FROM courses ORDER BY id DESC")->fetchAll();
 <body>
 
 <!-- Sidebar -->
-<div class="sidebar" id="sidebar">
-    <div class="logo-area">
-        <div class="logo"><i class="fas fa-brain me-2"></i>NEXORA</div>
-        <button class="toggle-btn" id="toggleBtn"><i class="fas fa-bars"></i></button>
-    </div>
-    <div class="menu">
-        <div class="menu-title">MAIN</div>
-        <a href="dashboard.php"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
-        <a href="manage_courses.php" class="active"><i class="fas fa-graduation-cap"></i><span>Courses</span></a>
-        <a href="manage_services.php"><i class="fas fa-cogs"></i><span>Services</span></a>
-        <a href="manage_portfolio.php"><i class="fas fa-briefcase"></i><span>Portfolio</span></a>
-        <a href="manage_testimonials.php"><i class="fas fa-star"></i><span>Testimonials</span></a>
-        <a href="manage_sliders.php"><i class="fas fa-images"></i><span>Sliders</span></a>
-        <a href="manage_customers.php"><i class="fas fa-users"></i><span>Customers</span></a>
-        <div class="menu-title">SYSTEM</div>
-        <a href="profile.php"><i class="fas fa-user-cog"></i><span>Profile</span></a>
-        <a href="logout.php"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
-    </div>
-</div>
+<?php include 'navigation.php'; ?>
 
 <div class="main" id="main">
     <div class="topbar">
@@ -409,7 +392,10 @@ $courses = $pdo->query("SELECT * FROM courses ORDER BY id DESC")->fetchAll();
                         <div class="col-md-12 mb-3"><label>Instructor Bio</label><textarea id="addInstructorBio" rows="2" class="form-control"></textarea></div>
                     </div>
                     <div class="row">
-                        <div class="col-12 mb-3"><label>Curriculum (JSON)</label><textarea id="addCurriculum" rows="4" class="form-control" placeholder='{"modules":[{"title":"Module 1","classes":[{"class_number":1,"topic":"Intro","type":"Video","resource":"Link"}]}]}'></textarea></div>
+                        <div class="col-12 mb-3"><label>Curriculum (JSON format)</label>
+                            <textarea id="addCurriculum" rows="8" class="form-control" placeholder='{"modules":[{"title":"Module 1","classes":[{"class_number":1,"topic":"Introduction","type":"Video","resource":"https://example.com/video1"}],"projects":"Build a simple app"}]}'></textarea>
+                            <small class="text-muted">Use valid JSON with modules array. Each module can have classes and optional projects.</small>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-md-12 mb-3"><label>Career Outcomes</label><textarea id="addCareerOutcomes" rows="2" class="form-control"></textarea></div>
@@ -455,7 +441,10 @@ $courses = $pdo->query("SELECT * FROM courses ORDER BY id DESC")->fetchAll();
                         <div class="col-md-12 mb-3"><label>Instructor Bio</label><textarea id="editInstructorBio" rows="2" class="form-control"></textarea></div>
                     </div>
                     <div class="row">
-                        <div class="col-12 mb-3"><label>Curriculum (JSON)</label><textarea id="editCurriculum" rows="4" class="form-control"></textarea></div>
+                        <div class="col-12 mb-3"><label>Curriculum (JSON format)</label>
+                            <textarea id="editCurriculum" rows="8" class="form-control"></textarea>
+                            <small class="text-muted">Use valid JSON with modules array.</small>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-md-12 mb-3"><label>Career Outcomes</label><textarea id="editCareerOutcomes" rows="2" class="form-control"></textarea></div>
@@ -472,7 +461,7 @@ $courses = $pdo->query("SELECT * FROM courses ORDER BY id DESC")->fetchAll();
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Sidebar toggle
+    // Sidebar toggle, theme toggle, search, image preview (same as before)
     const sidebar = document.getElementById('sidebar');
     const main = document.getElementById('main');
     const toggleBtn = document.getElementById('toggleBtn');
@@ -488,7 +477,6 @@ $courses = $pdo->query("SELECT * FROM courses ORDER BY id DESC")->fetchAll();
         main.classList.add('expand');
     }
 
-    // Theme toggle
     const themeToggle = document.getElementById('themeToggle');
     if (localStorage.getItem('nexoraTheme') === 'light') document.body.classList.add('light');
     themeToggle.addEventListener('click', () => {
@@ -499,7 +487,6 @@ $courses = $pdo->query("SELECT * FROM courses ORDER BY id DESC")->fetchAll();
     });
     themeToggle.innerHTML = document.body.classList.contains('light') ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
 
-    // Search filter
     document.getElementById('searchInput').addEventListener('keyup', function() {
         const filter = this.value.toLowerCase();
         document.querySelectorAll('#coursesTable tbody tr').forEach(row => {
@@ -508,7 +495,6 @@ $courses = $pdo->query("SELECT * FROM courses ORDER BY id DESC")->fetchAll();
         });
     });
 
-    // Image preview helper
     function setupImagePreview(fileInput, previewImg, hiddenUrlInput, uploadAction) {
         fileInput.addEventListener('change', async function() {
             if (this.files && this.files[0]) {
@@ -528,19 +514,16 @@ $courses = $pdo->query("SELECT * FROM courses ORDER BY id DESC")->fetchAll();
         });
     }
 
-    // Setup for add modal
     const addImage = document.getElementById('addImage');
     const addInstructorImage = document.getElementById('addInstructorImage');
     if (addImage) setupImagePreview(addImage, document.getElementById('addImagePreview'), document.getElementById('addImageUrl'), 'upload_image');
     if (addInstructorImage) setupImagePreview(addInstructorImage, document.getElementById('addInstructorImagePreview'), document.getElementById('addInstructorImageUrl'), 'upload_instructor_image');
 
-    // Setup for edit modal
     const editImage = document.getElementById('editImage');
     const editInstructorImage = document.getElementById('editInstructorImage');
     if (editImage) setupImagePreview(editImage, document.getElementById('editImagePreview'), document.getElementById('editImageUrl'), 'upload_image');
     if (editInstructorImage) setupImagePreview(editInstructorImage, document.getElementById('editInstructorImagePreview'), document.getElementById('editInstructorImageUrl'), 'upload_instructor_image');
 
-    // Add course submission
     document.getElementById('addCourseForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData();
@@ -560,9 +543,7 @@ $courses = $pdo->query("SELECT * FROM courses ORDER BY id DESC")->fetchAll();
         formData.append('instructor_name', document.getElementById('addInstructorName').value);
         formData.append('instructor_bio', document.getElementById('addInstructorBio').value);
         formData.append('instructor_image', document.getElementById('addInstructorImageUrl').value);
-        let curriculum = document.getElementById('addCurriculum').value;
-        if (!curriculum.trim()) curriculum = '{"modules":[]}';
-        formData.append('curriculum', curriculum);
+        formData.append('curriculum', document.getElementById('addCurriculum').value);
         formData.append('career_outcomes', document.getElementById('addCareerOutcomes').value);
         formData.append('prerequisites', document.getElementById('addPrerequisites').value);
         formData.append('software_learned', document.getElementById('addSoftwareLearned').value);
@@ -574,7 +555,6 @@ $courses = $pdo->query("SELECT * FROM courses ORDER BY id DESC")->fetchAll();
         else alert('Error: ' + data.message);
     });
 
-    // Populate edit modal
     const editModal = new bootstrap.Modal(document.getElementById('editCourseModal'));
     document.querySelectorAll('.edit-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -594,9 +574,7 @@ $courses = $pdo->query("SELECT * FROM courses ORDER BY id DESC")->fetchAll();
             document.getElementById('editTotalProjects').value = data.total_projects || 0;
             document.getElementById('editInstructorName').value = data.instructor_name || '';
             document.getElementById('editInstructorBio').value = data.instructor_bio || '';
-            let curriculum = data.curriculum;
-            if (!curriculum || curriculum === 'null' || curriculum === '') curriculum = '{"modules":[]}';
-            document.getElementById('editCurriculum').value = curriculum;
+            document.getElementById('editCurriculum').value = data.curriculum || '';
             document.getElementById('editCareerOutcomes').value = data.career_outcomes || '';
             document.getElementById('editPrerequisites').value = data.prerequisites || '';
             document.getElementById('editSoftwareLearned').value = data.software_learned || '';
@@ -621,7 +599,6 @@ $courses = $pdo->query("SELECT * FROM courses ORDER BY id DESC")->fetchAll();
         });
     });
 
-    // Update course submission
     document.getElementById('editCourseForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData();
@@ -642,9 +619,7 @@ $courses = $pdo->query("SELECT * FROM courses ORDER BY id DESC")->fetchAll();
         formData.append('instructor_name', document.getElementById('editInstructorName').value);
         formData.append('instructor_bio', document.getElementById('editInstructorBio').value);
         formData.append('instructor_image', document.getElementById('editInstructorImageUrl').value);
-        let curriculum = document.getElementById('editCurriculum').value;
-        if (!curriculum.trim()) curriculum = '{"modules":[]}';
-        formData.append('curriculum', curriculum);
+        formData.append('curriculum', document.getElementById('editCurriculum').value);
         formData.append('career_outcomes', document.getElementById('editCareerOutcomes').value);
         formData.append('prerequisites', document.getElementById('editPrerequisites').value);
         formData.append('software_learned', document.getElementById('editSoftwareLearned').value);
@@ -656,7 +631,6 @@ $courses = $pdo->query("SELECT * FROM courses ORDER BY id DESC")->fetchAll();
         else alert('Update failed: ' + data.message);
     });
 
-    // Toggle status
     document.querySelectorAll('.toggle-status').forEach(btn => {
         btn.addEventListener('click', async () => {
             const id = btn.dataset.id;
@@ -669,7 +643,6 @@ $courses = $pdo->query("SELECT * FROM courses ORDER BY id DESC")->fetchAll();
         });
     });
 
-    // Delete course
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
             if (!confirm('⚠️ Delete this course permanently?')) return;

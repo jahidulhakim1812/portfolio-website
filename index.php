@@ -128,6 +128,9 @@ foreach ($activeDistrictList as $district) {
         body.dark .glass-nav.scrolled {
             background: rgba(10, 10, 15, 0.98);
         }
+          footer .text-muted {
+            color: white !important;
+        }
         .navbar-brand {
             font-size: 1.6rem;
             font-weight: 800;

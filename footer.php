@@ -14,7 +14,11 @@
                     <li><a href="courses.php">Courses</a></li>
                     <li><a href="contact.php">Contact</a></li>
                      <li><a href="admin/login.php">Account</a></li>
+                      <li><a href="/freelancing"> Software </a></li>
                 </ul>
+               
+                   
+                    
             </div>
             <div class="col-md-4 mb-4">
                 <h5>Connect</h5>
