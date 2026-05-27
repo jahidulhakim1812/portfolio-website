@@ -1,5 +1,5 @@
 <?php
-// course-details.php - Comprehensive course details page with same header/footer as index.php
+// course-details.php - Supports both inline JSON and uploaded JSON file for curriculum
 require_once 'config.php';
 
 $course_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
@@ -12,29 +12,61 @@ if (!$course) {
     exit;
 }
 
-// Decode curriculum JSON if exists
-$curriculum = !empty($course['curriculum']) ? json_decode($course['curriculum'], true) : null;
+/**
+ * Get curriculum data from either JSON string or uploaded JSON file
+ * @param string|null $curriculum DB value (JSON string or file path)
+ * @return array|null Decoded curriculum array or null if invalid
+ */
+function getCurriculumData($curriculum) {
+    if (empty($curriculum)) {
+        return null;
+    }
+    
+    // Check if it's a file path (contains .json and file exists)
+    if (strpos($curriculum, '.json') !== false && file_exists('../' . $curriculum)) {
+        $fileContent = file_get_contents('../' . $curriculum);
+        $decoded = json_decode($fileContent, true);
+        if (is_array($decoded) && isset($decoded['modules'])) {
+            return $decoded;
+        }
+        return null;
+    }
+    
+    // Otherwise treat as JSON string
+    $decoded = json_decode($curriculum, true);
+    if (is_array($decoded) && isset($decoded['modules'])) {
+        return $decoded;
+    }
+    
+    return null;
+}
 
-// Fetch total enrolled count
-$enrollStmt = $pdo->prepare("SELECT COUNT(*) FROM enrollments WHERE course_id = ? AND payment_status = 'completed'");
-$enrollStmt->execute([$course_id]);
-$completedEnrollments = $enrollStmt->fetchColumn();
-$totalEnrolled = $course['enrolled_students'] + $completedEnrollments;
+// Get curriculum data from file or JSON string
+$curriculum = getCurriculumData($course['curriculum']);
+
+// Calculate real enrollment
+$totalEnrolled = (int)$course['enrolled_students'];
+try {
+    $enrollStmt = $pdo->prepare("SELECT COUNT(*) FROM enrollments WHERE course_id = ? AND payment_status = 'completed'");
+    $enrollStmt->execute([$course_id]);
+    $completedEnrollments = (int)$enrollStmt->fetchColumn();
+    $totalEnrolled += $completedEnrollments;
+} catch (PDOException $e) {
+    // Table may not exist – ignore
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="<?php echo htmlspecialchars(substr(strip_tags($course['short_description'] ?: $course['description']), 0, 160)); ?>">
     <title><?php echo htmlspecialchars($course['title']); ?> | AR Tech Solutions</title>
-    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700;14..32,800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* ---------- IDENTICAL TO INDEX.PHP STYLES (copied for consistency) ---------- */
+        /* [All the CSS from the previous version – kept exactly the same] */
         :root {
             --primary: #7c3aed;
             --primary-dark: #5b21b6;
@@ -71,7 +103,6 @@ $totalEnrolled = $course['enrolled_students'] + $completedEnrollments;
             font-family: 'Space Grotesk', sans-serif;
             font-weight: 700;
         }
-        /* Navbar (relative, not absolute for inner pages) */
         .glass-nav {
             position: relative;
             top: 0;
@@ -123,8 +154,7 @@ $totalEnrolled = $course['enrolled_students'] + $completedEnrollments;
             background: var(--primary);
             transition: 0.3s;
         }
-        .nav-link:hover::after,
-        .nav-link.active::after {
+        .nav-link:hover::after, .nav-link.active::after {
             width: 100%;
         }
         .dark-toggle {
@@ -141,7 +171,6 @@ $totalEnrolled = $course['enrolled_students'] + $completedEnrollments;
             background: rgba(124, 58, 237, 0.3);
             color: var(--secondary);
         }
-        /* Glass Card for content */
         .glass-card {
             background: var(--surface-light);
             border-radius: 28px;
@@ -168,8 +197,13 @@ $totalEnrolled = $course['enrolled_students'] + $completedEnrollments;
             transform: translateY(-3px);
             box-shadow: 0 10px 20px rgba(124, 58, 237, 0.3);
         }
+        .curriculum-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
         .curriculum-table th, .curriculum-table td {
             padding: 12px;
+            text-align: left;
             border-bottom: 1px solid var(--border-light);
         }
         body.dark .curriculum-table th, body.dark .curriculum-table td {
@@ -180,9 +214,40 @@ $totalEnrolled = $course['enrolled_students'] + $completedEnrollments;
             height: 120px;
             object-fit: cover;
             border-radius: 50%;
+            border: 3px solid var(--primary);
+        }
+        .fee-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            border-radius: 60px;
+            padding: 16px 32px;
+            font-size: 1.5rem;
+            font-weight: 800;
+            transition: 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .fee-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 25px rgba(124, 58, 237, 0.4);
+            color: white;
         }
         @media (max-width: 768px) {
             .instructor-img { width: 80px; height: 80px; }
+            .navbar-collapse {
+                background: rgba(255,255,255,0.95);
+                border-radius: 28px;
+                padding: 1rem;
+                margin-top: 1rem;
+            }
+            body.dark .navbar-collapse {
+                background: rgba(20,20,30,0.95);
+            }
+            .fee-btn {
+                padding: 10px 20px;
+                font-size: 1.2rem;
+            }
         }
         .breadcrumb {
             background: transparent;
@@ -198,7 +263,6 @@ $totalEnrolled = $course['enrolled_students'] + $completedEnrollments;
         .breadcrumb-item.active {
             color: var(--primary);
         }
-        /* Footer */
         footer {
             background: #0f172a;
             color: #cbd5e1;
@@ -215,7 +279,6 @@ $totalEnrolled = $course['enrolled_students'] + $completedEnrollments;
         footer a:hover {
             color: var(--secondary);
         }
-        /* Floating message icon */
         .floating-msg {
             position: fixed;
             bottom: 30px;
@@ -238,7 +301,6 @@ $totalEnrolled = $course['enrolled_students'] + $completedEnrollments;
             transform: scale(1.1);
             background: var(--secondary);
         }
-        /* Back to top */
         .back-to-top {
             position: fixed;
             bottom: 100px;
@@ -257,29 +319,23 @@ $totalEnrolled = $course['enrolled_students'] + $completedEnrollments;
             color: white;
         }
         .back-to-top.show { opacity: 1; }
-        /* Responsive */
-        @media (max-width: 768px) {
-            .navbar-collapse {
-                background: rgba(255,255,255,0.95);
-                border-radius: 28px;
-                padding: 1rem;
-                margin-top: 1rem;
-            }
-            body.dark .navbar-collapse {
-                background: rgba(20,20,30,0.95);
-            }
-        }
         .text-muted-custom {
             color: var(--text-muted-light);
         }
         body.dark .text-muted-custom {
             color: var(--text-muted-dark);
         }
+        .glass-card h2, .glass-card h3, .glass-card h4, .glass-card p {
+            color: inherit;
+        }
+        .table {
+            color: inherit;
+        }
     </style>
 </head>
 <body>
 
-<!-- Navbar - IDENTICAL to index.php (glass-nav, same links, dark toggle) -->
+<!-- Navbar -->
 <nav class="navbar navbar-expand-lg glass-nav" id="mainNavbar">
     <div class="container">
         <a class="navbar-brand" href="index.php"><i class="fas fa-vr-cardboard me-2"></i>ARTECH</a>
@@ -313,7 +369,7 @@ $totalEnrolled = $course['enrolled_students'] + $completedEnrollments;
     <div class="row mb-5">
         <div class="col-md-4 mb-4">
             <?php if(!empty($course['image_url'])): ?>
-                <img src="<?php echo htmlspecialchars($course['image_url']); ?>" class="img-fluid rounded-4 shadow" alt="<?php echo htmlspecialchars($course['title']); ?>">
+                <img src="<?php echo htmlspecialchars($course['image_url']); ?>" class="img-fluid rounded-4 shadow w-100" alt="<?php echo htmlspecialchars($course['title']); ?>" style="object-fit: cover; height: 250px;">
             <?php else: ?>
                 <div class="bg-primary bg-opacity-25 rounded-4 d-flex align-items-center justify-content-center" style="height: 250px;">
                     <i class="<?php echo htmlspecialchars($course['icon_class']); ?> fa-5x"></i>
@@ -356,59 +412,66 @@ $totalEnrolled = $course['enrolled_students'] + $completedEnrollments;
         </div>
     </div>
 
-    <!-- Fee & Enroll CTA -->
+    <!-- Fee as prominent button -->
     <div class="glass-card p-4 mb-5 text-center">
         <div class="row align-items-center">
             <div class="col-md-6">
                 <h3>Course Fee</h3>
-                <div class="d-flex justify-content-center gap-4">
+                <div class="d-flex justify-content-center gap-4 flex-wrap">
                     <div>
-                        <small class="text-muted">Online</small>
-                        <h2 class="text-primary">$<?php echo number_format($course['price'], 2); ?></h2>
+                        <small class="text-muted-custom">Online</small>
+                        <div class="fee-btn mt-2">$<?php echo number_format($course['price'], 2); ?></div>
                     </div>
                     <?php if($course['price_offline'] > 0): ?>
                     <div>
-                        <small class="text-muted">Offline</small>
-                        <h2 class="text-primary">$<?php echo number_format($course['price_offline'], 2); ?></h2>
+                        <small class="text-muted-custom">Offline</small>
+                        <div class="fee-btn mt-2" style="background: linear-gradient(135deg, var(--secondary), var(--primary));">$<?php echo number_format($course['price_offline'], 2); ?></div>
                     </div>
                     <?php endif; ?>
                 </div>
             </div>
-            <div class="col-md-6 mt-3 mt-md-0">
+            <div class="col-md-6 mt-4 mt-md-0">
                 <a href="enroll.php?course_id=<?php echo $course['id']; ?>" class="btn btn-primary-custom btn-lg px-5">Enroll Now <i class="fas fa-arrow-right"></i></a>
             </div>
         </div>
     </div>
 
-    <!-- Course Curriculum (if JSON data exists) -->
+    <!-- Course Curriculum – supports both inline JSON and uploaded JSON file -->
     <?php if($curriculum && !empty($curriculum['modules'])): ?>
     <div class="glass-card p-4 mb-4">
         <h2 class="mb-4">Course Curriculum</h2>
         <?php foreach($curriculum['modules'] as $moduleIndex => $module): ?>
-        <div class="mb-4">
-            <h4 class="mb-3">Module <?php echo $moduleIndex + 1; ?>: <?php echo htmlspecialchars($module['title']); ?></h4>
-            <div class="table-responsive">
-                <table class="table curriculum-table">
-                    <thead>
-                        <tr><th>Class</th><th>Topic</th><th>Type</th><th>Resources</th></tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach($module['classes'] as $class): ?>
-                        <tr>
-                            <td>Class <?php echo htmlspecialchars($class['class_number']); ?></td>
-                            <td><?php echo htmlspecialchars($class['topic']); ?></td>
-                            <td><?php echo htmlspecialchars($class['type']); ?></td>
-                            <td><?php echo htmlspecialchars($class['resource']); ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+            <?php if(empty($module['classes'])) continue; ?>
+            <div class="mb-4">
+                <h4 class="mb-3">Module <?php echo $moduleIndex + 1; ?>: <?php echo htmlspecialchars($module['title'] ?? 'Untitled Module'); ?></h4>
+                <div class="table-responsive">
+                    <table class="curriculum-table">
+                        <thead>
+                            <tr><th>Class</th><th>Topic</th><th>Type</th><th>Resources</th></tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach($module['classes'] as $class): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($class['class_number'] ?? '—'); ?></td>
+                                <td><?php echo htmlspecialchars($class['topic'] ?? '—'); ?></td>
+                                <td><?php echo htmlspecialchars($class['type'] ?? '—'); ?></td>
+                                <td><?php echo htmlspecialchars($class['resource'] ?? '—'); ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php if(!empty($module['projects'])): ?>
+                <div class="mt-2"><strong>Projects:</strong> <?php echo htmlspecialchars($module['projects']); ?></div>
+                <?php endif; ?>
             </div>
-            <?php if(!empty($module['projects'])): ?>
-            <div class="mt-2"><strong>Projects:</strong> <?php echo htmlspecialchars($module['projects']); ?></div>
-            <?php endif; ?>
-        </div>
         <?php endforeach; ?>
+    </div>
+    <?php else: ?>
+    <div class="glass-card p-4 mb-4 text-center">
+        <i class="fas fa-book-open fa-3x text-primary mb-3"></i>
+        <h4>Curriculum Coming Soon</h4>
+        <p class="text-muted-custom">We're preparing an amazing learning path for you.</p>
     </div>
     <?php endif; ?>
 
@@ -441,8 +504,8 @@ $totalEnrolled = $course['enrolled_students'] + $completedEnrollments;
     <div class="glass-card p-4 mb-4">
         <h2>Your Instructor</h2>
         <div class="row align-items-center">
-            <div class="col-md-2 text-center">
-                <img src="<?php echo htmlspecialchars($course['instructor_image'] ?: 'assets/default-avatar.png'); ?>" class="instructor-img" alt="<?php echo htmlspecialchars($course['instructor_name']); ?>">
+            <div class="col-md-2 text-center mb-3 mb-md-0">
+                <img src="<?php echo !empty($course['instructor_image']) ? htmlspecialchars($course['instructor_image']) : 'assets/default-avatar.png'; ?>" class="instructor-img" alt="<?php echo htmlspecialchars($course['instructor_name']); ?>">
             </div>
             <div class="col-md-10">
                 <h3><?php echo htmlspecialchars($course['instructor_name']); ?></h3>
@@ -453,7 +516,7 @@ $totalEnrolled = $course['enrolled_students'] + $completedEnrollments;
     <?php endif; ?>
 </main>
 
-<!-- Footer - IDENTICAL to index.php -->
+<!-- Footer -->
 <footer>
     <div class="container">
         <div class="row">
@@ -482,20 +545,12 @@ $totalEnrolled = $course['enrolled_students'] + $completedEnrollments;
     </div>
 </footer>
 
-<!-- Floating Message Icon -->
-<div class="floating-msg" id="floatingMsg">
-    <i class="fas fa-comment-dots"></i>
-</div>
+<!-- Floating elements -->
+<div class="floating-msg" id="floatingMsg"><i class="fas fa-comment-dots"></i></div>
+<div class="back-to-top" id="backToTop"><i class="fas fa-arrow-up"></i></div>
 
-<!-- Back to Top -->
-<div class="back-to-top" id="backToTop">
-    <i class="fas fa-arrow-up"></i>
-</div>
-
-<!-- Scripts (identical to index.php) -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Dark Mode Toggle (same as index.php)
     function initDarkMode() {
         const toggleBtn = document.getElementById('darkModeToggle');
         if (localStorage.getItem('darkMode') === 'enabled') {
@@ -511,41 +566,23 @@ $totalEnrolled = $course['enrolled_students'] + $completedEnrollments;
             toggleBtn.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
         });
     }
-
-    // Navbar Scroll Effect (same as index.php)
     function initNavbarScroll() {
         const navbar = document.querySelector('.glass-nav');
         window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
-            }
+            if (window.scrollY > 50) navbar.classList.add('scrolled');
+            else navbar.classList.remove('scrolled');
         });
     }
-
-    // Back to Top (same as index.php)
     function initBackToTop() {
         const btn = document.getElementById('backToTop');
         window.addEventListener('scroll', () => {
             if (window.scrollY > 300) btn.classList.add('show');
             else btn.classList.remove('show');
         });
-        btn.addEventListener('click', () => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
+        btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
     }
-
-    // Floating Message Alert (same as index.php)
-    document.getElementById('floatingMsg')?.addEventListener('click', () => {
-        alert('Live chat support coming soon! 📱');
-    });
-
-    document.addEventListener('DOMContentLoaded', () => {
-        initDarkMode();
-        initNavbarScroll();
-        initBackToTop();
-    });
+    document.getElementById('floatingMsg')?.addEventListener('click', () => alert('Live chat support coming soon! 📱'));
+    document.addEventListener('DOMContentLoaded', () => { initDarkMode(); initNavbarScroll(); initBackToTop(); });
 </script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 <?php
-// admin/manage_services.php - Service management with image upload
+// admin/manage_services.php - Complete service management with image upload, AJAX, and navigation.php integration
 require_once 'auth.php';
 require_once '../config.php';
 
@@ -75,7 +75,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
 
     if ($action === 'delete_service') {
         $id = intval($_POST['id']);
-        // Delete associated image file
         $stmt = $pdo->prepare("SELECT image_url FROM services WHERE id = ?");
         $stmt->execute([$id]);
         $service = $stmt->fetch();
@@ -102,7 +101,7 @@ $services = $pdo->query("SELECT * FROM services ORDER BY order_position ASC, id 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
-        /* ========== IDENTICAL TO DASHBOARD ========== */
+        /* ========== NEXORA DASHBOARD STYLES ========== */
         :root {
             --bg: #050816;
             --panel: #0f172a;
@@ -133,7 +132,6 @@ $services = $pdo->query("SELECT * FROM services ORDER BY order_position ASC, id 
             transition: all 0.3s ease;
             overflow-x: hidden;
         }
-        /* Floating background blobs */
         body::before, body::after {
             content: '';
             position: fixed;
@@ -156,40 +154,65 @@ $services = $pdo->query("SELECT * FROM services ORDER BY order_position ASC, id 
         }
         @keyframes floatBg { 0% { transform: translate(0,0); } 100% { transform: translate(100px, 80px); } }
         @keyframes floatBg2 { 0% { transform: translate(0,0); } 100% { transform: translate(-80px, -60px); } }
-        /* Sidebar */
-        .sidebar {
-            position: fixed; left: 20px; top: 20px; bottom: 20px; width: 280px;
-            background: rgba(15,23,42,0.9); backdrop-filter: blur(20px);
-            border-radius: 2rem; border: 1px solid var(--border); transition: 0.3s; z-index: 1050; box-shadow: var(--shadow);
+        /* Main content area (sidebar handled by navigation.php) */
+        .main {
+            margin-left: 310px;
+            padding: 20px;
+            transition: margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        body.light .sidebar { background: rgba(255,255,255,0.9); }
-        .sidebar.collapsed { width: 90px; }
-        .logo-area { padding: 1.5rem; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); }
-        .logo { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-        .toggle-btn { background: rgba(255,255,255,0.1); border: none; border-radius: 1rem; width: 40px; height: 40px; color: white; cursor: pointer; }
-        body.light .toggle-btn { background: rgba(0,0,0,0.05); color: #0f172a; }
-        .toggle-btn:hover { background: var(--primary); color: white; }
-        .menu { padding: 1rem; }
-        .menu-title { color: var(--muted); font-size: 0.7rem; letter-spacing: 2px; margin: 1rem 1rem 0.5rem; }
-        .menu a {
-            display: flex; align-items: center; gap: 14px; padding: 0.8rem 1rem;
-            border-radius: 1.2rem; color: var(--muted); text-decoration: none; margin-bottom: 0.5rem; transition: 0.2s;
+        .main.expand {
+            margin-left: 120px;
         }
-        .menu a i { width: 24px; font-size: 1.2rem; }
-        .menu a:hover, .menu a.active { background: rgba(124,58,237,0.2); color: var(--primary-glow); transform: translateX(5px); }
-        .sidebar.collapsed .logo, .sidebar.collapsed .menu span, .sidebar.collapsed .menu-title { display: none; }
-        .sidebar.collapsed .menu a { justify-content: center; }
-        .main { margin-left: 310px; padding: 20px; transition: 0.3s; }
-        .main.expand { margin-left: 120px; }
-        .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
-        .search-box { position: relative; width: 320px; }
-        .search-box input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 2rem; padding: 12px 20px 12px 45px; color: var(--text); }
-        .search-box input::placeholder { color: var(--muted); opacity: 0.7; }
-        .search-box i { position: absolute; left: 18px; top: 15px; color: var(--muted); }
-        .theme-toggle { background: rgba(255,255,255,0.1); border: none; border-radius: 2rem; width: 45px; height: 45px; cursor: pointer; color: var(--text); }
-        .profile-img { width: 48px; height: 48px; border-radius: 1.2rem; background: var(--primary); display: flex; align-items: center; justify-content: center; }
-        .panel { background: rgba(255,255,255,0.03); border-radius: 1.8rem; padding: 1.5rem; border: 1px solid var(--border); }
-        /* Table with strokes */
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .search-box {
+            position: relative;
+            width: 320px;
+        }
+        .search-box input {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 2rem;
+            padding: 12px 20px 12px 45px;
+            color: var(--text);
+        }
+        .search-box i {
+            position: absolute;
+            left: 18px;
+            top: 15px;
+            color: var(--muted);
+        }
+        .theme-toggle {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 2rem;
+            width: 45px;
+            height: 45px;
+            cursor: pointer;
+            color: var(--text);
+        }
+        .profile-img {
+            width: 48px;
+            height: 48px;
+            border-radius: 1.2rem;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .panel {
+            background: rgba(255,255,255,0.03);
+            border-radius: 1.8rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+        }
         .service-table {
             width: 100%;
             border-collapse: collapse;
@@ -253,20 +276,37 @@ $services = $pdo->query("SELECT * FROM services ORDER BY order_position ASC, id 
             color: white;
             font-weight: 600;
         }
-        .modal-content { background: var(--panel); color: var(--text); border-radius: 1.5rem; }
-        .form-control, .form-select { background: rgba(255,255,255,0.1); border: 1px solid var(--border); color: var(--text); border-radius: 1rem; }
-        .form-control::placeholder { color: var(--muted); opacity: 0.7; }
-        .form-control:focus { background: rgba(255,255,255,0.15); color: var(--text); box-shadow: none; border-color: var(--primary); }
-        .form-check-label { color: var(--text); }
-        .image-preview { width: 100px; height: 100px; object-fit: cover; border-radius: 1rem; margin-top: 0.5rem; border: 1px solid var(--border); }
+        .modal-content {
+            background: var(--panel);
+            color: var(--text);
+            border-radius: 1.5rem;
+        }
+        .form-control, .form-select {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 1rem;
+        }
+        .image-preview {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 1rem;
+            margin-top: 0.5rem;
+            border: 1px solid var(--border);
+        }
         @media (max-width: 768px) {
-            .sidebar { width: 80px; left: 10px; }
             .main { margin-left: 100px; }
             .service-table th, .service-table td { padding: 8px; font-size: 0.75rem; }
             .service-thumb { width: 40px; height: 40px; }
             .btn-sm-custom { font-size: 0.65rem; padding: 0.2rem 0.5rem; }
         }
-        .footer { text-align: center; margin-top: 30px; padding: 20px; color: var(--muted); }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            color: var(--muted);
+        }
     </style>
 </head>
 <body>
@@ -321,7 +361,7 @@ $services = $pdo->query("SELECT * FROM services ORDER BY order_position ASC, id 
                                 data-status="<?php echo $s['status']; ?>"><i class="fas fa-edit"></i> Edit</button>
                             <button class="toggle-status btn-sm-custom" data-id="<?php echo $s['id']; ?>"><i class="fas fa-sync-alt"></i> Toggle</button>
                             <button class="delete-btn btn-sm-custom" data-id="<?php echo $s['id']; ?>" style="border-color:var(--danger); color:var(--danger);"><i class="fas fa-trash"></i> Delete</button>
-                         </td>
+                          </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -342,7 +382,7 @@ $services = $pdo->query("SELECT * FROM services ORDER BY order_position ASC, id 
                         <div class="col-md-6 mb-3"><label>Title *</label><input type="text" id="addTitle" class="form-control" required></div>
                         <div class="col-md-6 mb-3"><label>Order Position</label><input type="number" id="addOrder" class="form-control" value="0"></div>
                         <div class="col-md-12 mb-3"><label>Description</label><textarea id="addDescription" rows="3" class="form-control"></textarea></div>
-                        <div class="col-md-6 mb-3"><label>Icon Class (fallback)</label><input type="text" id="addIcon" class="form-control" value="fas fa-cube" placeholder="fas fa-cube"></div>
+                        <div class="col-md-6 mb-3"><label>Icon Class (fallback)</label><input type="text" id="addIcon" class="form-control" value="fas fa-cube"></div>
                         <div class="col-md-6 mb-3"><label>Link URL</label><input type="text" id="addLink" class="form-control" value="#"></div>
                         <div class="col-md-12 mb-3"><label>Service Image</label><input type="file" id="addImage" class="form-control" accept="image/*"><img id="addImagePreview" class="image-preview" style="display:none;"><input type="hidden" id="addImageUrl"></div>
                         <div class="col-md-12 mb-3"><div class="form-check"><input type="checkbox" id="addStatus" class="form-check-input" checked><label class="form-check-label">Active</label></div></div>
@@ -380,19 +420,7 @@ $services = $pdo->query("SELECT * FROM services ORDER BY order_position ASC, id 
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Sidebar toggle
-    const sidebar = document.getElementById('sidebar'), main = document.getElementById('main');
-    document.getElementById('toggleBtn').onclick = () => {
-        sidebar.classList.toggle('collapsed');
-        main.classList.toggle('expand');
-        localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
-    };
-    if (localStorage.getItem('sidebarCollapsed') === 'true') {
-        sidebar.classList.add('collapsed');
-        main.classList.add('expand');
-    }
-
-    // Theme toggle
+    // Theme toggle (sidebar state is handled by navigation.js)
     const themeToggle = document.getElementById('themeToggle');
     if (localStorage.getItem('nexoraTheme') === 'light') document.body.classList.add('light');
     themeToggle.addEventListener('click', () => {

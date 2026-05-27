@@ -1,7 +1,30 @@
 <?php
-// admin/manage_customers.php - Customer management with country/district autocomplete
+// admin/manage_customers.php - Complete customer management with security & UX enhancements
 require_once 'auth.php';
 require_once '../config.php';
+
+// Start session only if not already active (prevents notice)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// CSRF token generation & validation
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+function jsonResponse($success, $message = '', $data = []) {
+    header('Content-Type: application/json');
+    echo json_encode(array_merge(['success' => $success, 'message' => $message], $data));
+    exit;
+}
+
+// Helper to delete image file if exists
+function deleteCustomerLogo($imagePath) {
+    if (!empty($imagePath) && file_exists('../' . $imagePath)) {
+        unlink('../' . $imagePath);
+    }
+}
 
 // List of common countries for dropdown
 $countries = [
@@ -23,10 +46,17 @@ $bangladeshDistricts = [
     'Sunamganj', 'Sylhet', 'Tangail', 'Thakurgaon'
 ];
 
-// Handle AJAX requests (unchanged, same as previous)
+// Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-    header('Content-Type: application/json');
     $action = $_POST['action'] ?? '';
+    $writeActions = ['add_customer', 'edit_customer', 'upload_logo', 'toggle_active', 'delete_customer'];
+    
+    // Verify CSRF token for all write actions
+    if (in_array($action, $writeActions)) {
+        if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+            jsonResponse(false, 'Security validation failed. Please refresh the page.');
+        }
+    }
 
     if ($action === 'add_customer') {
         $name = trim($_POST['name'] ?? '');
@@ -36,59 +66,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         $order = intval($_POST['order_position'] ?? 0);
         $is_active = isset($_POST['is_active']) ? 1 : 0;
 
-        if ($name) {
-            $stmt = $pdo->prepare("INSERT INTO customers (customer_name, logo_url, country, district, order_position, is_active) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$name, $logo_url, $country, $district, $order, $is_active]);
-            echo json_encode(['success' => true, 'message' => 'Customer added successfully']);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Customer name is required']);
+        if (strlen($name) < 2) {
+            jsonResponse(false, 'Customer name (min 2 chars) is required');
         }
-        exit;
+        $stmt = $pdo->prepare("INSERT INTO customers (customer_name, logo_url, country, district, order_position, is_active) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$name, $logo_url, $country, $district, $order, $is_active]);
+        jsonResponse(true, 'Customer added successfully');
     }
 
     if ($action === 'edit_customer') {
         $id = intval($_POST['id']);
         $name = trim($_POST['name']);
-        $logo_url = trim($_POST['logo_url'] ?? '');
+        $new_logo_url = trim($_POST['logo_url'] ?? '');
         $country = trim($_POST['country']);
         $district = trim($_POST['district']);
         $order = intval($_POST['order_position']);
         $is_active = isset($_POST['is_active']) ? 1 : 0;
 
-        if ($id && $name) {
-            $stmt = $pdo->prepare("UPDATE customers SET customer_name = ?, logo_url = ?, country = ?, district = ?, order_position = ?, is_active = ? WHERE id = ?");
-            $stmt->execute([$name, $logo_url, $country, $district, $order, $is_active, $id]);
-            echo json_encode(['success' => true, 'message' => 'Customer updated']);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Invalid data']);
+        if (!$id || strlen($name) < 2) {
+            jsonResponse(false, 'Invalid data: customer name required');
         }
-        exit;
+        // Fetch old logo to delete if replaced
+        $stmt = $pdo->prepare("SELECT logo_url FROM customers WHERE id = ?");
+        $stmt->execute([$id]);
+        $old = $stmt->fetch();
+        if ($old && !empty($old['logo_url']) && $old['logo_url'] !== $new_logo_url && !empty($new_logo_url)) {
+            deleteCustomerLogo($old['logo_url']);
+        }
+        $stmt = $pdo->prepare("UPDATE customers SET customer_name = ?, logo_url = ?, country = ?, district = ?, order_position = ?, is_active = ? WHERE id = ?");
+        $stmt->execute([$name, $new_logo_url, $country, $district, $order, $is_active, $id]);
+        jsonResponse(true, 'Customer updated');
     }
 
     if ($action === 'upload_logo') {
-        if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
-            $uploadDir = '../uploads/logos/';
-            if (!file_exists($uploadDir)) mkdir($uploadDir, 0777, true);
-            $ext = pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION);
-            $fileName = time() . '_' . uniqid() . '.' . $ext;
-            $targetPath = $uploadDir . $fileName;
-            if (move_uploaded_file($_FILES['logo']['tmp_name'], $targetPath)) {
-                echo json_encode(['success' => true, 'logo_url' => 'uploads/logos/' . $fileName]);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Failed to upload file']);
-            }
-        } else {
-            echo json_encode(['success' => false, 'message' => 'No file uploaded']);
+        if (!isset($_FILES['logo']) || $_FILES['logo']['error'] !== UPLOAD_ERR_OK) {
+            jsonResponse(false, 'No valid file uploaded');
         }
-        exit;
+        $file = $_FILES['logo'];
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+        if (!in_array($mime, $allowedTypes)) {
+            jsonResponse(false, 'Only JPG, PNG, WEBP, GIF, SVG allowed');
+        }
+        if ($file['size'] > 2 * 1024 * 1024) {
+            jsonResponse(false, 'Image size must be less than 2MB');
+        }
+        $uploadDir = '../uploads/logos/';
+        if (!file_exists($uploadDir)) mkdir($uploadDir, 0755, true);
+        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $safeExt = strtolower($ext);
+        $fileName = time() . '_' . bin2hex(random_bytes(8)) . '.' . $safeExt;
+        $targetPath = $uploadDir . $fileName;
+        if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+            jsonResponse(true, 'Upload successful', ['logo_url' => 'uploads/logos/' . $fileName]);
+        } else {
+            jsonResponse(false, 'Failed to save file');
+        }
     }
 
     if ($action === 'toggle_active') {
         $id = intval($_POST['id']);
         $stmt = $pdo->prepare("UPDATE customers SET is_active = NOT is_active WHERE id = ?");
         $stmt->execute([$id]);
-        echo json_encode(['success' => true]);
-        exit;
+        $stmt = $pdo->prepare("SELECT is_active FROM customers WHERE id = ?");
+        $stmt->execute([$id]);
+        $newActive = $stmt->fetchColumn();
+        jsonResponse(true, '', ['is_active' => $newActive]);
     }
 
     if ($action === 'delete_customer') {
@@ -96,18 +141,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         $stmt = $pdo->prepare("SELECT logo_url FROM customers WHERE id = ?");
         $stmt->execute([$id]);
         $cust = $stmt->fetch();
-        if ($cust && !empty($cust['logo_url']) && file_exists('../' . $cust['logo_url'])) {
-            unlink('../' . $cust['logo_url']);
+        if ($cust && !empty($cust['logo_url'])) {
+            deleteCustomerLogo($cust['logo_url']);
         }
         $stmt = $pdo->prepare("DELETE FROM customers WHERE id = ?");
         $stmt->execute([$id]);
-        echo json_encode(['success' => true]);
-        exit;
+        jsonResponse(true, 'Customer deleted');
     }
+    exit;
 }
 
 // Fetch all customers ordered by position
 $customers = $pdo->query("SELECT * FROM customers ORDER BY order_position ASC, id DESC")->fetchAll();
+$csrf_token = $_SESSION['csrf_token'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -119,7 +165,6 @@ $customers = $pdo->query("SELECT * FROM customers ORDER BY order_position ASC, i
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
-        /* ========== SAME STYLES AS PREVIOUS (unchanged) ========== */
         :root {
             --bg: #050816;
             --panel: #0f172a;
@@ -275,6 +320,7 @@ $customers = $pdo->query("SELECT * FROM customers ORDER BY order_position ASC, i
         .form-control:focus { background: rgba(255,255,255,0.15); color: var(--text); box-shadow: none; border-color: var(--primary); }
         .form-check-label { color: var(--text); }
         .image-preview { width: 80px; height: 80px; object-fit: contain; border-radius: 0.5rem; margin-top: 0.5rem; border: 1px solid var(--border); background: rgba(255,255,255,0.05); }
+        .btn-remove-img { background: var(--danger); border: none; border-radius: 1rem; font-size: 0.7rem; padding: 2px 6px; margin-top: 5px; color: white; }
         @media (max-width: 768px) {
             .sidebar { width: 80px; left: 10px; }
             .main { margin-left: 100px; }
@@ -282,6 +328,7 @@ $customers = $pdo->query("SELECT * FROM customers ORDER BY order_position ASC, i
             .logo-thumb { width: 35px; height: 35px; }
             .btn-sm-custom { font-size: 0.65rem; padding: 0.2rem 0.5rem; }
         }
+        .toast-container { z-index: 1100; }
         .footer { text-align: center; margin-top: 30px; padding: 20px; color: var(--muted); }
     </style>
 </head>
@@ -290,7 +337,7 @@ $customers = $pdo->query("SELECT * FROM customers ORDER BY order_position ASC, i
 
 <div class="main" id="main">
     <div class="topbar">
-        <div class="search-box"><i class="fas fa-search"></i><input type="text" id="searchInput" placeholder="Search customers..."></div>
+        <div class="search-box"><i class="fas fa-search"></i><input type="text" id="searchInput" placeholder="Search by name, country or district..."></div>
         <div style="display: flex; gap: 12px; align-items: center;">
             <button class="theme-toggle" id="themeToggle"><i class="fas fa-moon"></i></button>
             <div class="profile-img"><i class="fas fa-user-astronaut"></i></div>
@@ -306,9 +353,7 @@ $customers = $pdo->query("SELECT * FROM customers ORDER BY order_position ASC, i
         <div class="table-responsive">
             <table class="customer-table w-100" id="customersTable">
                 <thead>
-                    <tr>
-                        <th>Logo</th><th>ID</th><th>Customer Name</th><th>Country</th><th>District</th><th>Order</th><th>Status</th><th>Actions</th>
-                    </tr>
+                    <tr><th>Logo</th><th>ID</th><th>Customer Name</th><th>Country</th><th>District</th><th>Order</th><th>Status</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                     <?php foreach($customers as $c): ?>
@@ -317,26 +362,26 @@ $customers = $pdo->query("SELECT * FROM customers ORDER BY order_position ASC, i
                             <?php if($c['logo_url']): ?>
                                 <img src="../<?php echo htmlspecialchars($c['logo_url']); ?>" class="logo-thumb" alt="logo">
                             <?php else: ?>
-                                <i class="fas fa-image fa-2x text-muted"></i>
+                                <i class="fas fa-image fa-2x" style="color:var(--muted);"></i>
                             <?php endif; ?>
                         </td>
                         <td><?php echo $c['id']; ?></td>
-                        <td><?php echo htmlspecialchars($c['customer_name']); ?> <br><small class="text-muted" style="color:var(--muted);"><?php echo htmlspecialchars(substr($c['country'] ?? '', 0, 20)); ?></small></td>
-                        <td><?php echo htmlspecialchars($c['country']); ?></td>
-                        <td><?php echo htmlspecialchars($c['district']); ?></td>
+                        <td><strong><?php echo htmlspecialchars($c['customer_name']); ?></strong></td>
+                        <td><?php echo htmlspecialchars($c['country'] ?: '—'); ?></td>
+                        <td><?php echo htmlspecialchars($c['district'] ?: '—'); ?></td>
                         <td><?php echo $c['order_position']; ?></td>
                         <td><span class="status-badge <?php echo $c['is_active'] ? '' : 'inactive'; ?>"><?php echo $c['is_active'] ? 'Active' : 'Inactive'; ?></span></td>
                         <td>
                             <button class="edit-btn btn-sm-custom" data-id="<?php echo $c['id']; ?>" 
-                                data-name="<?php echo htmlspecialchars($c['customer_name']); ?>"
-                                data-logo="<?php echo htmlspecialchars($c['logo_url']); ?>"
-                                data-country="<?php echo htmlspecialchars($c['country']); ?>"
-                                data-district="<?php echo htmlspecialchars($c['district']); ?>"
+                                data-name="<?php echo htmlspecialchars($c['customer_name'], ENT_QUOTES); ?>"
+                                data-logo="<?php echo htmlspecialchars($c['logo_url'], ENT_QUOTES); ?>"
+                                data-country="<?php echo htmlspecialchars($c['country'], ENT_QUOTES); ?>"
+                                data-district="<?php echo htmlspecialchars($c['district'], ENT_QUOTES); ?>"
                                 data-order="<?php echo $c['order_position']; ?>"
                                 data-active="<?php echo $c['is_active']; ?>"><i class="fas fa-edit"></i> Edit</button>
                             <button class="toggle-active btn-sm-custom" data-id="<?php echo $c['id']; ?>"><i class="fas fa-sync-alt"></i> Toggle</button>
                             <button class="delete-btn btn-sm-custom" data-id="<?php echo $c['id']; ?>" style="border-color:var(--danger); color:var(--danger);"><i class="fas fa-trash"></i> Delete</button>
-                         </td>
+                          </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -346,14 +391,18 @@ $customers = $pdo->query("SELECT * FROM customers ORDER BY order_position ASC, i
     <div class="footer">© 2025 NEXORA AI | Customer Management System</div>
 </div>
 
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
 <!-- Add Customer Modal -->
 <div class="modal fade" id="addCustomerModal" tabindex="-1">
     <div class="modal-dialog modal-md">
         <div class="modal-content">
             <div class="modal-header"><h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Add New Customer</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <form id="addCustomerForm" enctype="multipart/form-data">
-                    <div class="mb-3"><label>Customer Name *</label><input type="text" id="addName" class="form-control" required></div>
+                <form id="addCustomerForm">
+                    <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+                    <div class="mb-3"><label>Customer Name *</label><input type="text" id="addName" class="form-control" required minlength="2"></div>
                     <div class="mb-3"><label>Country</label>
                         <select id="addCountry" class="form-select">
                             <option value="">Select Country</option>
@@ -367,9 +416,9 @@ $customers = $pdo->query("SELECT * FROM customers ORDER BY order_position ASC, i
                         <input type="text" id="addDistrict" class="form-control" placeholder="Enter district or state">
                     </div>
                     <div class="mb-3"><label>Order Position</label><input type="number" id="addOrder" class="form-control" value="0"></div>
-                    <div class="mb-3"><label>Customer Logo</label><input type="file" id="addLogo" class="form-control" accept="image/*"><img id="addLogoPreview" class="image-preview" style="display:none;"><input type="hidden" id="addLogoUrl"></div>
+                    <div class="mb-3"><label>Customer Logo</label><input type="file" id="addLogo" class="form-control" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"><img id="addLogoPreview" class="image-preview" style="display:none;"><input type="hidden" id="addLogoUrl"><button type="button" id="addRemoveLogo" class="btn-remove-img" style="display:none;">Remove logo</button></div>
                     <div class="mb-3"><div class="form-check"><input type="checkbox" id="addActive" class="form-check-input" checked><label class="form-check-label">Active</label></div></div>
-                    <button type="submit" class="btn btn-primary w-100">Create Customer</button>
+                    <button type="submit" class="btn btn-primary w-100" id="addSubmitBtn"><span class="spinner-border spinner-border-sm me-1 d-none" role="status"></span> Create Customer</button>
                 </form>
             </div>
         </div>
@@ -382,9 +431,10 @@ $customers = $pdo->query("SELECT * FROM customers ORDER BY order_position ASC, i
         <div class="modal-content">
             <div class="modal-header"><h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Customer</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <form id="editCustomerForm" enctype="multipart/form-data">
+                <form id="editCustomerForm">
+                    <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                     <input type="hidden" id="editId">
-                    <div class="mb-3"><label>Customer Name *</label><input type="text" id="editName" class="form-control" required></div>
+                    <div class="mb-3"><label>Customer Name *</label><input type="text" id="editName" class="form-control" required minlength="2"></div>
                     <div class="mb-3"><label>Country</label>
                         <select id="editCountry" class="form-select">
                             <option value="">Select Country</option>
@@ -394,13 +444,12 @@ $customers = $pdo->query("SELECT * FROM customers ORDER BY order_position ASC, i
                         </select>
                     </div>
                     <div class="mb-3" id="editDistrictContainer">
-                        <label>District / State</label>
-                        <div id="editDistrictField"></div>
+                        <!-- Dynamic field will be injected here -->
                     </div>
                     <div class="mb-3"><label>Order Position</label><input type="number" id="editOrder" class="form-control"></div>
-                    <div class="mb-3"><label>Customer Logo</label><input type="file" id="editLogo" class="form-control" accept="image/*"><img id="editLogoPreview" class="image-preview" style="display:none;"><input type="hidden" id="editLogoUrl"></div>
+                    <div class="mb-3"><label>Customer Logo</label><input type="file" id="editLogo" class="form-control" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"><img id="editLogoPreview" class="image-preview" style="display:none;"><input type="hidden" id="editLogoUrl"><button type="button" id="editRemoveLogo" class="btn-remove-img" style="display:none;">Remove logo</button></div>
                     <div class="mb-3"><div class="form-check"><input type="checkbox" id="editActive" class="form-check-input"><label class="form-check-label">Active</label></div></div>
-                    <button type="submit" class="btn btn-primary w-100">Update Customer</button>
+                    <button type="submit" class="btn btn-primary w-100" id="editSubmitBtn"><span class="spinner-border spinner-border-sm me-1 d-none" role="status"></span> Update Customer</button>
                 </form>
             </div>
         </div>
@@ -409,59 +458,65 @@ $customers = $pdo->query("SELECT * FROM customers ORDER BY order_position ASC, i
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Sidebar toggle (unchanged)
-    const sidebar = document.getElementById('sidebar'), main = document.getElementById('main');
-    document.getElementById('toggleBtn').onclick = () => {
-        sidebar.classList.toggle('collapsed');
-        main.classList.toggle('expand');
-        localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
-    };
-    if (localStorage.getItem('sidebarCollapsed') === 'true') {
-        sidebar.classList.add('collapsed');
-        main.classList.add('expand');
+    // Toast helper
+    function showToast(message, type = 'success') {
+        const toastContainer = document.querySelector('.toast-container');
+        const toastEl = document.createElement('div');
+        toastEl.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        toastContainer.appendChild(toastEl);
+        const bsToast = new bootstrap.Toast(toastEl, { autohide: true, delay: 3000 });
+        bsToast.show();
+        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
     }
 
-    // Theme toggle (unchanged)
+    // Sidebar toggle
+    const sidebar = document.getElementById('sidebar'), main = document.getElementById('main');
+    const toggleBtn = document.getElementById('toggleBtn');
+    if (toggleBtn) {
+        toggleBtn.onclick = () => {
+            sidebar.classList.toggle('collapsed');
+            main.classList.toggle('expand');
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        };
+    }
+    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+        sidebar?.classList.add('collapsed');
+        main?.classList.add('expand');
+    }
+
+    // Theme toggle without reload
     const themeToggle = document.getElementById('themeToggle');
     if (localStorage.getItem('nexoraTheme') === 'light') document.body.classList.add('light');
     themeToggle.addEventListener('click', () => {
         document.body.classList.toggle('light');
-        localStorage.setItem('nexoraTheme', document.body.classList.contains('light') ? 'light' : 'dark');
-        themeToggle.innerHTML = document.body.classList.contains('light') ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
-        location.reload();
+        const isLight = document.body.classList.contains('light');
+        localStorage.setItem('nexoraTheme', isLight ? 'light' : 'dark');
+        themeToggle.innerHTML = isLight ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
     });
-    if(document.body.classList.contains('light')) themeToggle.innerHTML = '<i class="fas fa-moon</i>'; else themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+    if(document.body.classList.contains('light')) themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+    else themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
 
-    // Search filter (unchanged)
-    document.getElementById('searchInput').addEventListener('keyup', function() {
+    // Enhanced search (name, country, district)
+    document.getElementById('searchInput').addEventListener('input', function() {
         const filter = this.value.toLowerCase();
         const rows = document.querySelectorAll('#customersTable tbody tr');
         rows.forEach(row => {
             const name = row.cells[2].innerText.toLowerCase();
-            row.style.display = name.includes(filter) ? '' : 'none';
+            const country = row.cells[3].innerText.toLowerCase();
+            const district = row.cells[4].innerText.toLowerCase();
+            const matches = name.includes(filter) || country.includes(filter) || district.includes(filter);
+            row.style.display = matches ? '' : 'none';
         });
     });
-
-    // Image preview helper (unchanged)
-    function setupImagePreview(fileInput, previewImg, hiddenUrlInput) {
-        fileInput.addEventListener('change', async function() {
-            if (this.files && this.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => { previewImg.src = e.target.result; previewImg.style.display = 'block'; };
-                reader.readAsDataURL(this.files[0]);
-                const formData = new FormData();
-                formData.append('action', 'upload_logo');
-                formData.append('logo', this.files[0]);
-                const res = await fetch('manage_customers.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
-                const data = await res.json();
-                if (data.success) hiddenUrlInput.value = data.logo_url;
-                else alert('Upload failed: ' + data.message);
-            }
-        });
-    }
-
-    setupImagePreview(document.getElementById('addLogo'), document.getElementById('addLogoPreview'), document.getElementById('addLogoUrl'));
-    setupImagePreview(document.getElementById('editLogo'), document.getElementById('editLogoPreview'), document.getElementById('editLogoUrl'));
 
     // List of Bangladesh districts (from PHP)
     const bangladeshDistricts = <?php echo json_encode($bangladeshDistricts); ?>;
@@ -470,18 +525,16 @@ $customers = $pdo->query("SELECT * FROM customers ORDER BY order_position ASC, i
     function updateDistrictField(containerId, selectedCountry, currentDistrict = '') {
         const container = document.getElementById(containerId);
         if (selectedCountry === 'Bangladesh') {
-            // Create select dropdown with all districts
-            let html = '<select id="' + (containerId === 'addDistrictContainer' ? 'addDistrict' : 'editDistrict') + '" class="form-select">';
+            let html = '<label>District</label><select id="' + (containerId === 'addDistrictContainer' ? 'addDistrict' : 'editDistrict') + '" class="form-select">';
             html += '<option value="">Select District</option>';
             bangladeshDistricts.forEach(district => {
                 const selected = (district === currentDistrict) ? 'selected' : '';
                 html += `<option value="${district}" ${selected}>${district}</option>`;
             });
             html += '</select>';
-            container.innerHTML = '<label>District</label>' + html;
+            container.innerHTML = html;
         } else {
-            // Plain text input
-            container.innerHTML = '<label>District / State</label><input type="text" id="' + (containerId === 'addDistrictContainer' ? 'addDistrict' : 'editDistrict') + '" class="form-control" placeholder="Enter district or state" value="' + currentDistrict + '">';
+            container.innerHTML = '<label>District / State</label><input type="text" id="' + (containerId === 'addDistrictContainer' ? 'addDistrict' : 'editDistrict') + '" class="form-control" placeholder="Enter district or state" value="' + currentDistrict.replace(/"/g, '&quot;') + '">';
         }
     }
 
@@ -494,15 +547,57 @@ $customers = $pdo->query("SELECT * FROM customers ORDER BY order_position ASC, i
     // Edit modal: when country changes, update district field
     const editCountrySelect = document.getElementById('editCountry');
     editCountrySelect.addEventListener('change', function() {
-        updateDistrictField('editDistrictContainer', this.value, '');
+        const currentDistrict = document.getElementById('editDistrict')?.value || '';
+        updateDistrictField('editDistrictContainer', this.value, currentDistrict);
     });
 
-    // Add customer AJAX (unchanged, but now uses dynamic field)
-    document.getElementById('addCustomerForm').addEventListener('submit', async (e) => {
+    // Image preview & upload helper with remove functionality
+    function setupImageUpload(fileInput, previewImg, hiddenUrl, removeBtn) {
+        fileInput.addEventListener('change', async function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => { previewImg.src = e.target.result; previewImg.style.display = 'block'; };
+                reader.readAsDataURL(this.files[0]);
+                const formData = new FormData();
+                formData.append('action', 'upload_logo');
+                formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+                formData.append('logo', this.files[0]);
+                try {
+                    const res = await fetch('manage_customers.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
+                    const data = await res.json();
+                    if (data.success) {
+                        hiddenUrl.value = data.logo_url;
+                        if (removeBtn) removeBtn.style.display = 'inline-block';
+                        showToast('Logo uploaded', 'success');
+                    } else showToast(data.message, 'danger');
+                } catch(e) { showToast('Upload failed', 'danger'); }
+            }
+        });
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => {
+                previewImg.style.display = 'none';
+                previewImg.src = '';
+                hiddenUrl.value = '';
+                fileInput.value = '';
+                removeBtn.style.display = 'none';
+            });
+        }
+    }
+
+    setupImageUpload(document.getElementById('addLogo'), document.getElementById('addLogoPreview'), document.getElementById('addLogoUrl'), document.getElementById('addRemoveLogo'));
+    setupImageUpload(document.getElementById('editLogo'), document.getElementById('editLogoPreview'), document.getElementById('editLogoUrl'), document.getElementById('editRemoveLogo'));
+
+    // Add customer AJAX
+    const addForm = document.getElementById('addCustomerForm');
+    addForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const btn = document.getElementById('addSubmitBtn');
+        const spinner = btn.querySelector('.spinner-border');
+        spinner.classList.remove('d-none');
+        btn.disabled = true;
         const districtField = document.getElementById('addDistrict');
         const districtValue = districtField ? districtField.value : '';
-        const formData = new FormData();
+        const formData = new FormData(addForm);
         formData.append('action', 'add_customer');
         formData.append('name', document.getElementById('addName').value);
         formData.append('country', document.getElementById('addCountry').value);
@@ -510,13 +605,18 @@ $customers = $pdo->query("SELECT * FROM customers ORDER BY order_position ASC, i
         formData.append('order_position', document.getElementById('addOrder').value);
         formData.append('is_active', document.getElementById('addActive').checked ? 1 : 0);
         formData.append('logo_url', document.getElementById('addLogoUrl').value);
-        const res = await fetch('manage_customers.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
-        const data = await res.json();
-        if (data.success) location.reload();
-        else alert('Error: ' + data.message);
+        try {
+            const res = await fetch('manage_customers.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.message);
+                setTimeout(() => location.reload(), 1000);
+            } else showToast(data.message, 'danger');
+        } catch(e) { showToast('Network error', 'danger'); }
+        finally { spinner.classList.add('d-none'); btn.disabled = false; }
     });
 
-    // Edit modal population (with district handling)
+    // Edit modal population
     const editModal = new bootstrap.Modal(document.getElementById('editCustomerModal'));
     document.querySelectorAll('.edit-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -538,26 +638,35 @@ $customers = $pdo->query("SELECT * FROM customers ORDER BY order_position ASC, i
             editCountry.value = country;
             // Update district field based on country
             updateDistrictField('editDistrictContainer', country, district);
-            // Re-attach change event to the newly created district field (already done by updateDistrictField)
             // Logo preview
+            const preview = document.getElementById('editLogoPreview');
+            const hiddenUrl = document.getElementById('editLogoUrl');
+            const removeBtn = document.getElementById('editRemoveLogo');
             if (logo) {
-                document.getElementById('editLogoPreview').src = '../' + logo;
-                document.getElementById('editLogoPreview').style.display = 'block';
-                document.getElementById('editLogoUrl').value = logo;
+                preview.src = '../' + logo;
+                preview.style.display = 'block';
+                hiddenUrl.value = logo;
+                removeBtn.style.display = 'inline-block';
             } else {
-                document.getElementById('editLogoPreview').style.display = 'none';
-                document.getElementById('editLogoUrl').value = '';
+                preview.style.display = 'none';
+                hiddenUrl.value = '';
+                removeBtn.style.display = 'none';
             }
             editModal.show();
         });
     });
 
-    // Edit customer AJAX (must use dynamic district field)
-    document.getElementById('editCustomerForm').addEventListener('submit', async (e) => {
+    // Edit customer AJAX
+    const editForm = document.getElementById('editCustomerForm');
+    editForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const btn = document.getElementById('editSubmitBtn');
+        const spinner = btn.querySelector('.spinner-border');
+        spinner.classList.remove('d-none');
+        btn.disabled = true;
         const districtField = document.getElementById('editDistrict');
         const districtValue = districtField ? districtField.value : '';
-        const formData = new FormData();
+        const formData = new FormData(editForm);
         formData.append('action', 'edit_customer');
         formData.append('id', document.getElementById('editId').value);
         formData.append('name', document.getElementById('editName').value);
@@ -566,36 +675,78 @@ $customers = $pdo->query("SELECT * FROM customers ORDER BY order_position ASC, i
         formData.append('order_position', document.getElementById('editOrder').value);
         formData.append('is_active', document.getElementById('editActive').checked ? 1 : 0);
         formData.append('logo_url', document.getElementById('editLogoUrl').value);
-        const res = await fetch('manage_customers.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
-        const data = await res.json();
-        if (data.success) location.reload();
-        else alert('Error');
+        try {
+            const res = await fetch('manage_customers.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.message);
+                setTimeout(() => location.reload(), 1000);
+            } else showToast(data.message, 'danger');
+        } catch(e) { showToast('Network error', 'danger'); }
+        finally { spinner.classList.add('d-none'); btn.disabled = false; }
     });
 
-    // Toggle active status (unchanged)
+    // Toggle Active (no reload, update UI)
     document.querySelectorAll('.toggle-active').forEach(btn => {
         btn.addEventListener('click', async () => {
             const id = btn.dataset.id;
             const formData = new FormData();
             formData.append('action', 'toggle_active');
             formData.append('id', id);
-            const res = await fetch('manage_customers.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
-            const data = await res.json();
-            if (data.success) location.reload();
+            formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+            try {
+                const res = await fetch('manage_customers.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
+                const data = await res.json();
+                if (data.success) {
+                    const row = document.querySelector(`tr[data-id="${id}"]`);
+                    const statusCell = row.cells[6];
+                    const newActive = data.is_active;
+                    statusCell.innerHTML = `<span class="status-badge ${newActive ? '' : 'inactive'}">${newActive ? 'Active' : 'Inactive'}</span>`;
+                    showToast(`Status changed to ${newActive ? 'Active' : 'Inactive'}`, 'success');
+                } else showToast(data.message, 'danger');
+            } catch(e) { showToast('Error toggling status', 'danger'); }
         });
     });
 
-    // Delete with confirmation (unchanged)
+    // Delete with confirmation, remove row on success
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
-            if (!confirm('Delete this customer permanently?')) return;
+            if (!confirm('Delete this customer permanently? This action cannot be undone.')) return;
             const id = btn.dataset.id;
             const formData = new FormData();
             formData.append('action', 'delete_customer');
             formData.append('id', id);
-            const res = await fetch('manage_customers.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
-            const data = await res.json();
-            if (data.success) location.reload();
+            formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+            try {
+                const res = await fetch('manage_customers.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
+                const data = await res.json();
+                if (data.success) {
+                    const row = document.querySelector(`tr[data-id="${id}"]`);
+                    row.remove();
+                    showToast('Customer deleted', 'success');
+                } else showToast(data.message, 'danger');
+            } catch(e) { showToast('Delete failed', 'danger'); }
+        });
+    });
+
+    // Modal reset on close
+    ['addCustomerModal', 'editCustomerModal'].forEach(modalId => {
+        const modalEl = document.getElementById(modalId);
+        modalEl.addEventListener('hidden.bs.modal', () => {
+            const form = modalEl.querySelector('form');
+            if (form) form.reset();
+            // Reset add district container to default input
+            if (modalId === 'addCustomerModal') {
+                const container = document.getElementById('addDistrictContainer');
+                if (container) container.innerHTML = '<label>District / State</label><input type="text" id="addDistrict" class="form-control" placeholder="Enter district or state">';
+                document.getElementById('addCountry').value = '';
+            }
+            const preview = modalEl.querySelector('.image-preview');
+            if (preview) { preview.style.display = 'none'; preview.src = ''; }
+            const hiddenUrl = modalEl.querySelector('input[type="hidden"][id*="LogoUrl"]');
+            if (hiddenUrl) hiddenUrl.value = '';
+            const removeBtn = modalEl.querySelector('.btn-remove-img');
+            if (removeBtn) removeBtn.style.display = 'none';
         });
     });
 </script>

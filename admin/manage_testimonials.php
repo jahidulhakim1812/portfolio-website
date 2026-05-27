@@ -1,12 +1,42 @@
 <?php
-// admin/manage_testimonials.php - Full testimonial management with image upload and star rating
+// admin/manage_testimonials.php - Complete testimonial management with security & UX enhancements
 require_once 'auth.php';
 require_once '../config.php';
 
+// Start session only if not already active (prevents notice)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// CSRF token generation & validation
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+function jsonResponse($success, $message = '', $data = []) {
+    header('Content-Type: application/json');
+    echo json_encode(array_merge(['success' => $success, 'message' => $message], $data));
+    exit;
+}
+
+// Helper to delete image file if exists
+function deleteTestimonialImage($imagePath) {
+    if (!empty($imagePath) && file_exists('../' . $imagePath)) {
+        unlink('../' . $imagePath);
+    }
+}
+
 // Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-    header('Content-Type: application/json');
     $action = $_POST['action'] ?? '';
+    $writeActions = ['add_testimonial', 'edit_testimonial', 'upload_image', 'toggle_status', 'delete_testimonial'];
+    
+    // Verify CSRF token for all write actions
+    if (in_array($action, $writeActions)) {
+        if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+            jsonResponse(false, 'Security validation failed. Please refresh the page.');
+        }
+    }
 
     if ($action === 'add_testimonial') {
         $client_name = trim($_POST['client_name'] ?? '');
@@ -18,14 +48,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         $order_position = intval($_POST['order_position'] ?? 0);
         $status = isset($_POST['status']) ? 1 : 0;
 
-        if ($client_name && $testimonial_text) {
-            $stmt = $pdo->prepare("INSERT INTO testimonials (client_name, client_title, company, testimonial_text, image_url, rating, order_position, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$client_name, $client_title, $company, $testimonial_text, $image_url, $rating, $order_position, $status]);
-            echo json_encode(['success' => true, 'message' => 'Testimonial added successfully']);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Client name and testimonial text are required']);
+        if (strlen($client_name) < 2 || strlen($testimonial_text) < 5) {
+            jsonResponse(false, 'Client name (min 2 chars) and testimonial text (min 5 chars) are required');
         }
-        exit;
+        if ($rating < 1 || $rating > 5) $rating = 5;
+        
+        $stmt = $pdo->prepare("INSERT INTO testimonials (client_name, client_title, company, testimonial_text, image_url, rating, order_position, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$client_name, $client_title, $company, $testimonial_text, $image_url, $rating, $order_position, $status]);
+        jsonResponse(true, 'Testimonial added successfully');
     }
 
     if ($action === 'edit_testimonial') {
@@ -34,65 +64,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         $client_title = trim($_POST['client_title']);
         $company = trim($_POST['company']);
         $testimonial_text = trim($_POST['testimonial_text']);
-        $image_url = trim($_POST['image_url'] ?? '');
+        $new_image_url = trim($_POST['image_url'] ?? '');
         $rating = intval($_POST['rating']);
         $order_position = intval($_POST['order_position']);
         $status = isset($_POST['status']) ? 1 : 0;
 
-        if ($id && $client_name && $testimonial_text) {
-            $stmt = $pdo->prepare("UPDATE testimonials SET client_name = ?, client_title = ?, company = ?, testimonial_text = ?, image_url = ?, rating = ?, order_position = ?, status = ? WHERE id = ?");
-            $stmt->execute([$client_name, $client_title, $company, $testimonial_text, $image_url, $rating, $order_position, $status, $id]);
-            echo json_encode(['success' => true, 'message' => 'Testimonial updated']);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Invalid data']);
+        if (!$id || strlen($client_name) < 2 || strlen($testimonial_text) < 5) {
+            jsonResponse(false, 'Invalid data: client name and testimonial text required');
         }
-        exit;
+        // Fetch old image to delete if replaced
+        $stmt = $pdo->prepare("SELECT image_url FROM testimonials WHERE id = ?");
+        $stmt->execute([$id]);
+        $old = $stmt->fetch();
+        if ($old && !empty($old['image_url']) && $old['image_url'] !== $new_image_url && !empty($new_image_url)) {
+            deleteTestimonialImage($old['image_url']);
+        }
+        $stmt = $pdo->prepare("UPDATE testimonials SET client_name = ?, client_title = ?, company = ?, testimonial_text = ?, image_url = ?, rating = ?, order_position = ?, status = ? WHERE id = ?");
+        $stmt->execute([$client_name, $client_title, $company, $testimonial_text, $new_image_url, $rating, $order_position, $status, $id]);
+        jsonResponse(true, 'Testimonial updated');
     }
 
     if ($action === 'upload_image') {
-        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $uploadDir = '../uploads/testimonials/';
-            if (!file_exists($uploadDir)) mkdir($uploadDir, 0777, true);
-            $ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
-            $fileName = time() . '_' . uniqid() . '.' . $ext;
-            $targetPath = $uploadDir . $fileName;
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $targetPath)) {
-                echo json_encode(['success' => true, 'image_url' => 'uploads/testimonials/' . $fileName]);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Failed to upload file']);
-            }
-        } else {
-            echo json_encode(['success' => false, 'message' => 'No file uploaded']);
+        if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+            jsonResponse(false, 'No valid file uploaded');
         }
-        exit;
+        $file = $_FILES['image'];
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+        if (!in_array($mime, $allowedTypes)) {
+            jsonResponse(false, 'Only JPG, PNG, WEBP, GIF allowed');
+        }
+        if ($file['size'] > 2 * 1024 * 1024) {
+            jsonResponse(false, 'Image size must be less than 2MB');
+        }
+        $uploadDir = '../uploads/testimonials/';
+        if (!file_exists($uploadDir)) mkdir($uploadDir, 0755, true);
+        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $safeExt = strtolower($ext);
+        $fileName = time() . '_' . bin2hex(random_bytes(8)) . '.' . $safeExt;
+        $targetPath = $uploadDir . $fileName;
+        if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+            jsonResponse(true, 'Upload successful', ['image_url' => 'uploads/testimonials/' . $fileName]);
+        } else {
+            jsonResponse(false, 'Failed to save file');
+        }
     }
 
     if ($action === 'toggle_status') {
         $id = intval($_POST['id']);
         $stmt = $pdo->prepare("UPDATE testimonials SET status = NOT status WHERE id = ?");
         $stmt->execute([$id]);
-        echo json_encode(['success' => true]);
-        exit;
+        $stmt = $pdo->prepare("SELECT status FROM testimonials WHERE id = ?");
+        $stmt->execute([$id]);
+        $newStatus = $stmt->fetchColumn();
+        jsonResponse(true, '', ['status' => $newStatus]);
     }
 
     if ($action === 'delete_testimonial') {
         $id = intval($_POST['id']);
-        // Delete associated image file
         $stmt = $pdo->prepare("SELECT image_url FROM testimonials WHERE id = ?");
         $stmt->execute([$id]);
         $testimonial = $stmt->fetch();
-        if ($testimonial && !empty($testimonial['image_url']) && file_exists('../' . $testimonial['image_url'])) {
-            unlink('../' . $testimonial['image_url']);
+        if ($testimonial && !empty($testimonial['image_url'])) {
+            deleteTestimonialImage($testimonial['image_url']);
         }
         $stmt = $pdo->prepare("DELETE FROM testimonials WHERE id = ?");
         $stmt->execute([$id]);
-        echo json_encode(['success' => true]);
-        exit;
+        jsonResponse(true, 'Testimonial deleted');
     }
+    exit;
 }
 
 // Fetch all testimonials ordered by position
 $testimonials = $pdo->query("SELECT * FROM testimonials ORDER BY order_position ASC, id DESC")->fetchAll();
+$csrf_token = $_SESSION['csrf_token'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -104,7 +151,6 @@ $testimonials = $pdo->query("SELECT * FROM testimonials ORDER BY order_position 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
-        /* ========== NEXORA DASHBOARD STYLES (same as previous) ========== */
         :root {
             --bg: #050816;
             --panel: #0f172a;
@@ -263,6 +309,7 @@ $testimonials = $pdo->query("SELECT * FROM testimonials ORDER BY order_position 
         .form-control:focus { background: rgba(255,255,255,0.15); color: var(--text); box-shadow: none; border-color: var(--primary); }
         .form-check-label { color: var(--text); }
         .image-preview { width: 80px; height: 80px; object-fit: cover; border-radius: 50%; margin-top: 0.5rem; border: 2px solid var(--primary); }
+        .btn-remove-img { background: var(--danger); border: none; border-radius: 1rem; font-size: 0.7rem; padding: 2px 6px; margin-top: 5px; color: white; }
         @media (max-width: 768px) {
             .sidebar { width: 80px; left: 10px; }
             .main { margin-left: 100px; }
@@ -270,14 +317,17 @@ $testimonials = $pdo->query("SELECT * FROM testimonials ORDER BY order_position 
             .client-thumb { width: 35px; height: 35px; }
             .btn-sm-custom { font-size: 0.65rem; padding: 0.2rem 0.5rem; }
         }
+        .toast-container { z-index: 1100; }
         .footer { text-align: center; margin-top: 30px; padding: 20px; color: var(--muted); }
+        .desc-truncate { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     </style>
 </head>
 <body>
 <?php include 'navigation.php'; ?>
+
 <div class="main" id="main">
     <div class="topbar">
-        <div class="search-box"><i class="fas fa-search"></i><input type="text" id="searchInput" placeholder="Search testimonials..."></div>
+        <div class="search-box"><i class="fas fa-search"></i><input type="text" id="searchInput" placeholder="Search by client name, title or company..."></div>
         <div style="display: flex; gap: 12px; align-items: center;">
             <button class="theme-toggle" id="themeToggle"><i class="fas fa-moon"></i></button>
             <div class="profile-img"><i class="fas fa-user-astronaut"></i></div>
@@ -293,9 +343,7 @@ $testimonials = $pdo->query("SELECT * FROM testimonials ORDER BY order_position 
         <div class="table-responsive">
             <table class="testimonial-table w-100" id="testimonialsTable">
                 <thead>
-                    <tr>
-                        <th>Photo</th><th>ID</th><th>Client</th><th>Title/Company</th><th>Testimonial</th><th>Rating</th><th>Order</th><th>Status</th><th>Actions</th>
-                    </tr>
+                    <tr><th>Photo</th><th>ID</th><th>Client</th><th>Company</th><th>Testimonial</th><th>Rating</th><th>Order</th><th>Status</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                     <?php foreach($testimonials as $t): ?>
@@ -308,19 +356,24 @@ $testimonials = $pdo->query("SELECT * FROM testimonials ORDER BY order_position 
                             <?php endif; ?>
                         </td>
                         <td><?php echo $t['id']; ?></td>
-                        <td><?php echo htmlspecialchars($t['client_name']); ?> <br><small class="text-muted" style="color:var(--muted);"><?php echo htmlspecialchars($t['client_title']); ?></small></td>
-                        <td><?php echo htmlspecialchars($t['company']); ?></td>
-                        <td><?php echo htmlspecialchars(substr($t['testimonial_text'], 0, 60)); ?>...</td>
+                        <td>
+                            <strong><?php echo htmlspecialchars($t['client_name']); ?></strong><br>
+                            <small class="text-muted" style="color:var(--muted);"><?php echo htmlspecialchars($t['client_title']); ?></small>
+                         </td>
+                        <td><?php echo htmlspecialchars($t['company'] ?: '—'); ?></td>
+                        <td>
+                            <span class="desc-truncate" title="<?php echo htmlspecialchars($t['testimonial_text']); ?>"><?php echo htmlspecialchars(substr($t['testimonial_text'], 0, 80)) . (strlen($t['testimonial_text']) > 80 ? '…' : ''); ?></span>
+                         </td>
                         <td class="star-rating"><?php echo str_repeat('★', $t['rating']) . str_repeat('☆', 5 - $t['rating']); ?></td>
                         <td><?php echo $t['order_position']; ?></td>
                         <td><span class="status-badge <?php echo $t['status'] ? '' : 'inactive'; ?>"><?php echo $t['status'] ? 'Active' : 'Inactive'; ?></span></td>
                         <td>
                             <button class="edit-btn btn-sm-custom" data-id="<?php echo $t['id']; ?>" 
-                                data-client_name="<?php echo htmlspecialchars($t['client_name']); ?>"
-                                data-client_title="<?php echo htmlspecialchars($t['client_title']); ?>"
-                                data-company="<?php echo htmlspecialchars($t['company']); ?>"
-                                data-testimonial_text="<?php echo htmlspecialchars($t['testimonial_text']); ?>"
-                                data-image="<?php echo htmlspecialchars($t['image_url']); ?>"
+                                data-client_name="<?php echo htmlspecialchars($t['client_name'], ENT_QUOTES); ?>"
+                                data-client_title="<?php echo htmlspecialchars($t['client_title'], ENT_QUOTES); ?>"
+                                data-company="<?php echo htmlspecialchars($t['company'], ENT_QUOTES); ?>"
+                                data-testimonial_text="<?php echo htmlspecialchars($t['testimonial_text'], ENT_QUOTES); ?>"
+                                data-image="<?php echo htmlspecialchars($t['image_url'], ENT_QUOTES); ?>"
                                 data-rating="<?php echo $t['rating']; ?>"
                                 data-order="<?php echo $t['order_position']; ?>"
                                 data-status="<?php echo $t['status']; ?>"><i class="fas fa-edit"></i> Edit</button>
@@ -336,27 +389,31 @@ $testimonials = $pdo->query("SELECT * FROM testimonials ORDER BY order_position 
     <div class="footer">© 2025 NEXORA AI | Testimonial Management System</div>
 </div>
 
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
 <!-- Add Testimonial Modal -->
 <div class="modal fade" id="addTestimonialModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header"><h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Add New Testimonial</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <form id="addTestimonialForm" enctype="multipart/form-data">
+                <form id="addTestimonialForm">
+                    <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                     <div class="row">
-                        <div class="col-md-6 mb-3"><label>Client Name *</label><input type="text" id="addClientName" class="form-control" required></div>
+                        <div class="col-md-6 mb-3"><label>Client Name *</label><input type="text" id="addClientName" class="form-control" required minlength="2"></div>
                         <div class="col-md-6 mb-3"><label>Order Position</label><input type="number" id="addOrder" class="form-control" value="0"></div>
                         <div class="col-md-6 mb-3"><label>Designation</label><input type="text" id="addClientTitle" class="form-control" placeholder="CEO, Director..."></div>
                         <div class="col-md-6 mb-3"><label>Company</label><input type="text" id="addCompany" class="form-control"></div>
-                        <div class="col-md-12 mb-3"><label>Testimonial Text *</label><textarea id="addTestimonialText" rows="3" class="form-control" required></textarea></div>
+                        <div class="col-md-12 mb-3"><label>Testimonial Text *</label><textarea id="addTestimonialText" rows="3" class="form-control" required minlength="5"></textarea></div>
                         <div class="col-md-6 mb-3"><label>Rating (1-5)</label><select id="addRating" class="form-select">
                             <option value="5">★★★★★ (5)</option><option value="4">★★★★☆ (4)</option><option value="3">★★★☆☆ (3)</option>
                             <option value="2">★★☆☆☆ (2)</option><option value="1">★☆☆☆☆ (1)</option>
                         </select></div>
-                        <div class="col-md-6 mb-3"><label>Client Photo</label><input type="file" id="addImage" class="form-control" accept="image/*"><img id="addImagePreview" class="image-preview" style="display:none;"><input type="hidden" id="addImageUrl"></div>
+                        <div class="col-md-6 mb-3"><label>Client Photo</label><input type="file" id="addImage" class="form-control" accept="image/jpeg,image/png,image/webp,image/gif"><img id="addImagePreview" class="image-preview" style="display:none;"><input type="hidden" id="addImageUrl"><button type="button" id="addRemoveImage" class="btn-remove-img" style="display:none;">Remove image</button></div>
                         <div class="col-md-12 mb-3"><div class="form-check"><input type="checkbox" id="addStatus" class="form-check-input" checked><label class="form-check-label">Active</label></div></div>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100 mt-2">Create Testimonial</button>
+                    <button type="submit" class="btn btn-primary w-100 mt-2" id="addSubmitBtn"><span class="spinner-border spinner-border-sm me-1 d-none" role="status"></span> Create Testimonial</button>
                 </form>
             </div>
         </div>
@@ -369,22 +426,23 @@ $testimonials = $pdo->query("SELECT * FROM testimonials ORDER BY order_position 
         <div class="modal-content">
             <div class="modal-header"><h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Testimonial</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <form id="editTestimonialForm" enctype="multipart/form-data">
+                <form id="editTestimonialForm">
+                    <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                     <input type="hidden" id="editId">
                     <div class="row">
-                        <div class="col-md-6 mb-3"><label>Client Name *</label><input type="text" id="editClientName" class="form-control" required></div>
+                        <div class="col-md-6 mb-3"><label>Client Name *</label><input type="text" id="editClientName" class="form-control" required minlength="2"></div>
                         <div class="col-md-6 mb-3"><label>Order Position</label><input type="number" id="editOrder" class="form-control"></div>
                         <div class="col-md-6 mb-3"><label>Designation</label><input type="text" id="editClientTitle" class="form-control"></div>
                         <div class="col-md-6 mb-3"><label>Company</label><input type="text" id="editCompany" class="form-control"></div>
-                        <div class="col-md-12 mb-3"><label>Testimonial Text *</label><textarea id="editTestimonialText" rows="3" class="form-control" required></textarea></div>
+                        <div class="col-md-12 mb-3"><label>Testimonial Text *</label><textarea id="editTestimonialText" rows="3" class="form-control" required minlength="5"></textarea></div>
                         <div class="col-md-6 mb-3"><label>Rating (1-5)</label><select id="editRating" class="form-select">
                             <option value="5">★★★★★ (5)</option><option value="4">★★★★☆ (4)</option><option value="3">★★★☆☆ (3)</option>
                             <option value="2">★★☆☆☆ (2)</option><option value="1">★☆☆☆☆ (1)</option>
                         </select></div>
-                        <div class="col-md-6 mb-3"><label>Client Photo</label><input type="file" id="editImage" class="form-control" accept="image/*"><img id="editImagePreview" class="image-preview" style="display:none;"><input type="hidden" id="editImageUrl"></div>
+                        <div class="col-md-6 mb-3"><label>Client Photo</label><input type="file" id="editImage" class="form-control" accept="image/jpeg,image/png,image/webp,image/gif"><img id="editImagePreview" class="image-preview" style="display:none;"><input type="hidden" id="editImageUrl"><button type="button" id="editRemoveImage" class="btn-remove-img" style="display:none;">Remove image</button></div>
                         <div class="col-md-12 mb-3"><div class="form-check"><input type="checkbox" id="editStatus" class="form-check-input"><label class="form-check-label">Active</label></div></div>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100 mt-2">Update Testimonial</button>
+                    <button type="submit" class="btn btn-primary w-100 mt-2" id="editSubmitBtn"><span class="spinner-border spinner-border-sm me-1 d-none" role="status"></span> Update Testimonial</button>
                 </form>
             </div>
         </div>
@@ -393,41 +451,68 @@ $testimonials = $pdo->query("SELECT * FROM testimonials ORDER BY order_position 
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Sidebar toggle
-    const sidebar = document.getElementById('sidebar'), main = document.getElementById('main');
-    document.getElementById('toggleBtn').onclick = () => {
-        sidebar.classList.toggle('collapsed');
-        main.classList.toggle('expand');
-        localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
-    };
-    if (localStorage.getItem('sidebarCollapsed') === 'true') {
-        sidebar.classList.add('collapsed');
-        main.classList.add('expand');
+    // Toast helper
+    function showToast(message, type = 'success') {
+        const toastContainer = document.querySelector('.toast-container');
+        const toastEl = document.createElement('div');
+        toastEl.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        toastContainer.appendChild(toastEl);
+        const bsToast = new bootstrap.Toast(toastEl, { autohide: true, delay: 3000 });
+        bsToast.show();
+        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
     }
 
-    // Theme toggle
+    // Sidebar toggle
+    const sidebar = document.getElementById('sidebar'), main = document.getElementById('main');
+    const toggleBtn = document.getElementById('toggleBtn');
+    if (toggleBtn) {
+        toggleBtn.onclick = () => {
+            sidebar.classList.toggle('collapsed');
+            main.classList.toggle('expand');
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        };
+    }
+    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+        sidebar?.classList.add('collapsed');
+        main?.classList.add('expand');
+    }
+
+    // Theme toggle without reload
     const themeToggle = document.getElementById('themeToggle');
     if (localStorage.getItem('nexoraTheme') === 'light') document.body.classList.add('light');
     themeToggle.addEventListener('click', () => {
         document.body.classList.toggle('light');
-        localStorage.setItem('nexoraTheme', document.body.classList.contains('light') ? 'light' : 'dark');
-        themeToggle.innerHTML = document.body.classList.contains('light') ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
-        location.reload();
+        const isLight = document.body.classList.contains('light');
+        localStorage.setItem('nexoraTheme', isLight ? 'light' : 'dark');
+        themeToggle.innerHTML = isLight ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
     });
-    if(document.body.classList.contains('light')) themeToggle.innerHTML = '<i class="fas fa-moon"></i>'; else themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+    if(document.body.classList.contains('light')) themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+    else themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
 
-    // Search filter
-    document.getElementById('searchInput').addEventListener('keyup', function() {
+    // Enhanced search (client name, title, company)
+    document.getElementById('searchInput').addEventListener('input', function() {
         const filter = this.value.toLowerCase();
         const rows = document.querySelectorAll('#testimonialsTable tbody tr');
         rows.forEach(row => {
-            const client = row.cells[2].innerText.toLowerCase();
-            row.style.display = client.includes(filter) ? '' : 'none';
+            const clientName = row.cells[2].querySelector('strong')?.innerText.toLowerCase() || '';
+            const clientTitle = row.cells[2].querySelector('small')?.innerText.toLowerCase() || '';
+            const company = row.cells[3].innerText.toLowerCase();
+            const matches = clientName.includes(filter) || clientTitle.includes(filter) || company.includes(filter);
+            row.style.display = matches ? '' : 'none';
         });
     });
 
-    // Image preview helper (circular)
-    function setupImagePreview(fileInput, previewImg, hiddenUrlInput) {
+    // Image preview & upload helper with remove functionality
+    function setupImageUpload(fileInput, previewImg, hiddenUrl, removeBtn) {
         fileInput.addEventListener('change', async function() {
             if (this.files && this.files[0]) {
                 const reader = new FileReader();
@@ -435,22 +520,42 @@ $testimonials = $pdo->query("SELECT * FROM testimonials ORDER BY order_position 
                 reader.readAsDataURL(this.files[0]);
                 const formData = new FormData();
                 formData.append('action', 'upload_image');
+                formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
                 formData.append('image', this.files[0]);
-                const res = await fetch('manage_testimonials.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
-                const data = await res.json();
-                if (data.success) hiddenUrlInput.value = data.image_url;
-                else alert('Upload failed: ' + data.message);
+                try {
+                    const res = await fetch('manage_testimonials.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
+                    const data = await res.json();
+                    if (data.success) {
+                        hiddenUrl.value = data.image_url;
+                        if (removeBtn) removeBtn.style.display = 'inline-block';
+                        showToast('Image uploaded', 'success');
+                    } else showToast(data.message, 'danger');
+                } catch(e) { showToast('Upload failed', 'danger'); }
             }
         });
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => {
+                previewImg.style.display = 'none';
+                previewImg.src = '';
+                hiddenUrl.value = '';
+                fileInput.value = '';
+                removeBtn.style.display = 'none';
+            });
+        }
     }
 
-    setupImagePreview(document.getElementById('addImage'), document.getElementById('addImagePreview'), document.getElementById('addImageUrl'));
-    setupImagePreview(document.getElementById('editImage'), document.getElementById('editImagePreview'), document.getElementById('editImageUrl'));
+    setupImageUpload(document.getElementById('addImage'), document.getElementById('addImagePreview'), document.getElementById('addImageUrl'), document.getElementById('addRemoveImage'));
+    setupImageUpload(document.getElementById('editImage'), document.getElementById('editImagePreview'), document.getElementById('editImageUrl'), document.getElementById('editRemoveImage'));
 
     // Add testimonial AJAX
-    document.getElementById('addTestimonialForm').addEventListener('submit', async (e) => {
+    const addForm = document.getElementById('addTestimonialForm');
+    addForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData();
+        const btn = document.getElementById('addSubmitBtn');
+        const spinner = btn.querySelector('.spinner-border');
+        spinner.classList.remove('d-none');
+        btn.disabled = true;
+        const formData = new FormData(addForm);
         formData.append('action', 'add_testimonial');
         formData.append('client_name', document.getElementById('addClientName').value);
         formData.append('client_title', document.getElementById('addClientTitle').value);
@@ -460,10 +565,15 @@ $testimonials = $pdo->query("SELECT * FROM testimonials ORDER BY order_position 
         formData.append('order_position', document.getElementById('addOrder').value);
         formData.append('status', document.getElementById('addStatus').checked ? 1 : 0);
         formData.append('image_url', document.getElementById('addImageUrl').value);
-        const res = await fetch('manage_testimonials.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
-        const data = await res.json();
-        if (data.success) location.reload();
-        else alert('Error: ' + data.message);
+        try {
+            const res = await fetch('manage_testimonials.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.message);
+                setTimeout(() => location.reload(), 1000);
+            } else showToast(data.message, 'danger');
+        } catch(e) { showToast('Network error', 'danger'); }
+        finally { spinner.classList.add('d-none'); btn.disabled = false; }
     });
 
     // Edit modal population
@@ -479,20 +589,31 @@ $testimonials = $pdo->query("SELECT * FROM testimonials ORDER BY order_position 
             document.getElementById('editOrder').value = btn.dataset.order;
             document.getElementById('editStatus').checked = btn.dataset.status == 1;
             const existingImage = btn.dataset.image;
+            const preview = document.getElementById('editImagePreview');
+            const hiddenUrl = document.getElementById('editImageUrl');
+            const removeBtn = document.getElementById('editRemoveImage');
             if (existingImage) {
-                document.getElementById('editImagePreview').src = '../' + existingImage;
-                document.getElementById('editImagePreview').style.display = 'block';
-                document.getElementById('editImageUrl').value = existingImage;
+                preview.src = '../' + existingImage;
+                preview.style.display = 'block';
+                hiddenUrl.value = existingImage;
+                removeBtn.style.display = 'inline-block';
             } else {
-                document.getElementById('editImagePreview').style.display = 'none';
-                document.getElementById('editImageUrl').value = '';
+                preview.style.display = 'none';
+                hiddenUrl.value = '';
+                removeBtn.style.display = 'none';
             }
             editModal.show();
         });
     });
-    document.getElementById('editTestimonialForm').addEventListener('submit', async (e) => {
+    // Edit submit
+    const editForm = document.getElementById('editTestimonialForm');
+    editForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData();
+        const btn = document.getElementById('editSubmitBtn');
+        const spinner = btn.querySelector('.spinner-border');
+        spinner.classList.remove('d-none');
+        btn.disabled = true;
+        const formData = new FormData(editForm);
         formData.append('action', 'edit_testimonial');
         formData.append('id', document.getElementById('editId').value);
         formData.append('client_name', document.getElementById('editClientName').value);
@@ -503,36 +624,72 @@ $testimonials = $pdo->query("SELECT * FROM testimonials ORDER BY order_position 
         formData.append('order_position', document.getElementById('editOrder').value);
         formData.append('status', document.getElementById('editStatus').checked ? 1 : 0);
         formData.append('image_url', document.getElementById('editImageUrl').value);
-        const res = await fetch('manage_testimonials.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
-        const data = await res.json();
-        if (data.success) location.reload();
-        else alert('Error');
+        try {
+            const res = await fetch('manage_testimonials.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.message);
+                setTimeout(() => location.reload(), 1000);
+            } else showToast(data.message, 'danger');
+        } catch(e) { showToast('Network error', 'danger'); }
+        finally { spinner.classList.add('d-none'); btn.disabled = false; }
     });
 
-    // Toggle status
+    // Toggle Status (no reload, update UI)
     document.querySelectorAll('.toggle-status').forEach(btn => {
         btn.addEventListener('click', async () => {
             const id = btn.dataset.id;
             const formData = new FormData();
             formData.append('action', 'toggle_status');
             formData.append('id', id);
-            const res = await fetch('manage_testimonials.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
-            const data = await res.json();
-            if (data.success) location.reload();
+            formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+            try {
+                const res = await fetch('manage_testimonials.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
+                const data = await res.json();
+                if (data.success) {
+                    const row = document.querySelector(`tr[data-id="${id}"]`);
+                    const statusCell = row.cells[7];
+                    const newStatus = data.status;
+                    statusCell.innerHTML = `<span class="status-badge ${newStatus ? '' : 'inactive'}">${newStatus ? 'Active' : 'Inactive'}</span>`;
+                    showToast(`Status changed to ${newStatus ? 'Active' : 'Inactive'}`, 'success');
+                } else showToast(data.message, 'danger');
+            } catch(e) { showToast('Error toggling status', 'danger'); }
         });
     });
 
-    // Delete with confirmation
+    // Delete with confirmation, remove row on success
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
-            if (!confirm('Delete this testimonial permanently?')) return;
+            if (!confirm('Delete this testimonial permanently? This action cannot be undone.')) return;
             const id = btn.dataset.id;
             const formData = new FormData();
             formData.append('action', 'delete_testimonial');
             formData.append('id', id);
-            const res = await fetch('manage_testimonials.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
-            const data = await res.json();
-            if (data.success) location.reload();
+            formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+            try {
+                const res = await fetch('manage_testimonials.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
+                const data = await res.json();
+                if (data.success) {
+                    const row = document.querySelector(`tr[data-id="${id}"]`);
+                    row.remove();
+                    showToast('Testimonial deleted', 'success');
+                } else showToast(data.message, 'danger');
+            } catch(e) { showToast('Delete failed', 'danger'); }
+        });
+    });
+
+    // Modal reset on close
+    ['addTestimonialModal', 'editTestimonialModal'].forEach(modalId => {
+        const modalEl = document.getElementById(modalId);
+        modalEl.addEventListener('hidden.bs.modal', () => {
+            const form = modalEl.querySelector('form');
+            if (form) form.reset();
+            const preview = modalEl.querySelector('.image-preview');
+            if (preview) { preview.style.display = 'none'; preview.src = ''; }
+            const hiddenUrl = modalEl.querySelector('input[type="hidden"][id*="ImageUrl"]');
+            if (hiddenUrl) hiddenUrl.value = '';
+            const removeBtn = modalEl.querySelector('.btn-remove-img');
+            if (removeBtn) removeBtn.style.display = 'none';
         });
     });
 </script>

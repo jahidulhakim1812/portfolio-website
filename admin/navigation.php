@@ -19,7 +19,9 @@
         <a href="manage_chairman.php"><i class="fas fa-microphone-alt"></i><span>Chairman Speech</span></a>
         <a href="manage_team.php"><i class="fas fa-users"></i><span>Team</span></a>
         <a href="manage_contact.php"><i class="fas fa-envelope"></i><span>Contact Messages</span></a>
+             <a href="manage_enrollments.php"><i class="fas fa-user-graduate"></i><span>Enrollments</span></a>
         <div class="menu-title">SYSTEM</div>
+
         <a href="logout.php"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
     </div>
 </div>

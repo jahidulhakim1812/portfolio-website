@@ -1,8 +1,8 @@
 <?php
-// index.php - Complete dynamic homepage with all cards and testimonial slider
+// index.php - Complete dynamic homepage with all cards and testimonial slider, read-more toggle, and distinct description color
 require_once 'config.php';
 
-// Fetch all dynamic content (removed LIMIT to show all)
+// Fetch all dynamic content
 $sliders = $pdo->query("SELECT * FROM sliders WHERE status = 1 ORDER BY order_position ASC")->fetchAll();
 $services = $pdo->query("SELECT * FROM services WHERE status = 1 ORDER BY order_position ASC, id ASC")->fetchAll();
 $allPortfolios = $pdo->query("SELECT * FROM portfolios WHERE status = 1 ORDER BY order_position ASC, id DESC")->fetchAll();
@@ -56,6 +56,7 @@ foreach ($activeDistrictList as $district) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="AR Tech Solutions - Immersive Reality experiences, AR/VR development, and digital transformation.">
     <title>AR Tech Solutions | Immersive Reality</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -63,7 +64,6 @@ foreach ($activeDistrictList as $district) {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* ---------- FULL DESIGN SYSTEM ---------- */
         :root {
             --primary: #7c3aed;
             --primary-dark: #5b21b6;
@@ -171,12 +171,14 @@ foreach ($activeDistrictList as $district) {
             background: rgba(124, 58, 237, 0.3);
             color: var(--secondary);
         }
-        /* Hero Slider */
+        /* Hero Slider - perfect mobile & desktop */
         .hero-slider {
             width: 100%;
+            height: 100vh;
             height: 100dvh;
             min-height: -webkit-fill-available;
             position: relative;
+            overflow: hidden;
         }
         .heroSwiper, .heroSwiper .swiper-wrapper, .heroSwiper .swiper-slide {
             height: 100%;
@@ -189,6 +191,7 @@ foreach ($activeDistrictList as $district) {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            object-position: center center;
             filter: brightness(0.6);
         }
         .hero-content {
@@ -203,13 +206,31 @@ foreach ($activeDistrictList as $district) {
             font-weight: 800;
             text-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
+        /* Responsive */
         @media (max-width: 768px) {
-            .hero-title { font-size: 2.5rem; }
-            .hero-content .fs-4 { font-size: 1.1rem !important; }
+            .hero-title { font-size: 2.2rem; line-height: 1.2; }
+            .hero-content .fs-4 { font-size: 1rem !important; margin-top: 0.5rem; }
+            .hero-content .btn-primary-custom { padding: 8px 20px; font-size: 0.9rem; }
             .glass-nav { top: 10px; width: 94%; left: 3%; }
             .navbar-collapse { background: rgba(255,255,255,0.95); border-radius: 28px; padding: 1rem; margin-top: 1rem; }
             body.dark .navbar-collapse { background: rgba(20,20,30,0.95); }
             .service-col, .course-col, .project-col { flex: 0 0 50%; max-width: 50%; }
+            .card-img-top { height: 170px !important; object-fit: cover; object-position: center; }
+            .glass-card .card-body { padding: 1rem; }
+            .glass-card h4, .glass-card h5 { font-size: 1rem; margin-bottom: 0.5rem; }
+            .description-text { font-size: 0.8rem; }
+            .btn-outline-custom { padding: 4px 16px; font-size: 0.75rem; }
+            .counter-num { font-size: 2rem; }
+            .counter-card { padding: 1rem; }
+            .cta-modern { padding: 1.5rem; }
+            .cta-modern h2 { font-size: 1.5rem; }
+            #bangladeshMap { height: 320px; }
+            .logo-card-fixed img { max-height: 45px; }
+        }
+        @media (max-width: 480px) {
+            .hero-title { font-size: 1.8rem; }
+            .hero-content .fs-4 { font-size: 0.9rem !important; }
+            .card-img-top { height: 150px !important; }
         }
         /* Buttons */
         .btn-primary-custom {
@@ -259,9 +280,16 @@ foreach ($activeDistrictList as $district) {
             width: 100%;
             height: 200px;
             object-fit: cover;
+            object-position: center;
         }
         .card-body {
             padding: 1.5rem;
+        }
+        .description-text {
+            color: var(--text-muted-light);
+        }
+        body.dark .description-text {
+            color: var(--text-muted-dark);
         }
         /* Counters */
         .counter-card {
@@ -287,7 +315,7 @@ foreach ($activeDistrictList as $district) {
             border: 1px solid var(--border-light);
             box-shadow: var(--shadow);
         }
-        /* Trusted by Innovators */
+        /* Trusted section */
         .trusted-section {
             background: #ffffff;
         }
@@ -302,7 +330,6 @@ foreach ($activeDistrictList as $district) {
             background: transparent;
             padding: 1rem;
             border-radius: 20px;
-            transition: 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -319,7 +346,7 @@ foreach ($activeDistrictList as $district) {
             filter: grayscale(0%);
             transform: scale(1.02);
         }
-        /* Testimonial Slider Cards */
+        /* Testimonials */
         .testimonial-card {
             background: var(--surface-light);
             border-radius: 24px;
@@ -361,10 +388,7 @@ foreach ($activeDistrictList as $district) {
         footer a:hover {
             color: var(--secondary);
         }
-          footer .text-muted {
-            color: white !important;
-        }
-        /* Floating buttons & modals */
+        /* Floating buttons */
         .floating-testimonial, .floating-chat {
             position: fixed;
             z-index: 99;
@@ -395,8 +419,6 @@ foreach ($activeDistrictList as $district) {
             font-size: 1.6rem;
         }
         .floating-testimonial:hover, .floating-chat:hover { transform: scale(1.1); }
-        .floating-testimonial:hover { background: var(--primary-dark); }
-        .floating-chat:hover { background: var(--secondary); }
         @media (max-width: 768px) {
             .floating-testimonial { width: 50px; height: 50px; font-size: 1.4rem; bottom: 100px; }
             .floating-chat { bottom: 30px; left: 30px; }
@@ -445,6 +467,19 @@ foreach ($activeDistrictList as $district) {
             background: var(--bg-light);
             color: var(--text-light);
         }
+        /* Read-more */
+        .truncated-text { display: inline; }
+        .full-text { display: none; }
+        .read-more-btn {
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-left: 5px;
+            text-decoration: none;
+        }
+        .read-more-btn:hover { text-decoration: underline; }
+        .card-text-wrapper { margin-bottom: 0.5rem; }
     </style>
 </head>
 <body>
@@ -474,7 +509,7 @@ foreach ($activeDistrictList as $district) {
             <div class="swiper-wrapper">
                 <?php foreach($sliders as $slide): ?>
                 <div class="swiper-slide">
-                    <img src="<?php echo htmlspecialchars($slide['image_url']); ?>" class="slide-bg" alt="slide">
+                    <img src="<?php echo htmlspecialchars($slide['image_url']); ?>" class="slide-bg" alt="<?php echo htmlspecialchars($slide['title']); ?>">
                     <div class="hero-content container d-flex flex-column justify-content-center h-100">
                         <h1 class="hero-title"><?php echo htmlspecialchars($slide['title']); ?></h1>
                         <p class="fs-4"><?php echo htmlspecialchars($slide['subtitle']); ?></p>
@@ -491,7 +526,7 @@ foreach ($activeDistrictList as $district) {
         </div>
     </section>
 
-    <!-- Our Services - all cards -->
+    <!-- Our Services -->
     <section class="py-5">
         <div class="container">
             <div class="text-center mb-5">
@@ -513,8 +548,14 @@ foreach ($activeDistrictList as $district) {
                             <?php endif; ?>
                             <div class="card-body">
                                 <h4><?php echo htmlspecialchars($service['title']); ?></h4>
-                                <p class="text-muted-custom"><?php echo htmlspecialchars($service['description']); ?></p>
-                                <span class="btn btn-outline-custom btn-sm">Learn More →</span>
+                                <div class="card-text-wrapper description-text">
+                                    <span class="truncated-text"><?php echo htmlspecialchars(substr($service['description'], 0, 100)); ?><?php echo strlen($service['description']) > 100 ? '...' : ''; ?></span>
+                                    <span class="full-text"><?php echo htmlspecialchars($service['description']); ?></span>
+                                    <?php if(strlen($service['description']) > 100): ?>
+                                    <span class="read-more-btn" onclick="toggleReadMore(this)">Read more</span>
+                                    <?php endif; ?>
+                                </div>
+                                <span class="btn btn-outline-custom btn-sm mt-2">Learn More →</span>
                             </div>
                         </div>
                     </a>
@@ -524,7 +565,7 @@ foreach ($activeDistrictList as $district) {
         </div>
     </section>
 
-    <!-- Our Courses - all cards -->
+    <!-- Our Courses -->
     <section class="py-5" style="background: rgba(124,58,237,0.03);">
         <div class="container">
             <div class="text-center mb-5">
@@ -550,8 +591,14 @@ foreach ($activeDistrictList as $district) {
                                     <span class="badge bg-primary"><?php echo htmlspecialchars($course['level']); ?></span>
                                     <span class="badge bg-secondary"><?php echo htmlspecialchars($course['duration']); ?></span>
                                 </div>
-                                <p class="small text-muted-custom"><?php echo htmlspecialchars($course['description']); ?></p>
-                                <div class="d-flex justify-content-between align-items-center">
+                                <div class="card-text-wrapper description-text">
+                                    <span class="truncated-text"><?php echo htmlspecialchars(substr($course['description'], 0, 100)); ?><?php echo strlen($course['description']) > 100 ? '...' : ''; ?></span>
+                                    <span class="full-text"><?php echo htmlspecialchars($course['description']); ?></span>
+                                    <?php if(strlen($course['description']) > 100): ?>
+                                    <span class="read-more-btn" onclick="toggleReadMore(this)">Read more</span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-2">
                                     <span class="fw-bold text-primary">$<?php echo number_format($course['price'], 2); ?></span>
                                     <span class="badge bg-info"><?php echo $course['enrolled_students']; ?>+ enrolled</span>
                                 </div>
@@ -567,7 +614,7 @@ foreach ($activeDistrictList as $district) {
         </div>
     </section>
 
-    <!-- Portfolio Projects (all active projects) -->
+    <!-- Portfolio Projects -->
     <section class="py-5">
         <div class="container">
             <div class="text-center mb-5">
@@ -583,8 +630,14 @@ foreach ($activeDistrictList as $district) {
                         <div class="card-body">
                             <h4 class="fs-5"><?php echo htmlspecialchars($project['title']); ?></h4>
                             <p class="text-muted-custom small"><i class="fas fa-building"></i> <?php echo htmlspecialchars($project['client']); ?></p>
-                            <p class="text-muted-custom small"><?php echo substr($project['description'], 0, 70); ?>...</p>
-                            <a href="portfolio-details.php?id=<?php echo $project['id']; ?>" class="btn btn-outline-custom btn-sm">View Details</a>
+                            <div class="card-text-wrapper description-text">
+                                <span class="truncated-text"><?php echo htmlspecialchars(substr($project['description'], 0, 70)); ?><?php echo strlen($project['description']) > 70 ? '...' : ''; ?></span>
+                                <span class="full-text"><?php echo htmlspecialchars($project['description']); ?></span>
+                                <?php if(strlen($project['description']) > 70): ?>
+                                <span class="read-more-btn" onclick="toggleReadMore(this)">Read more</span>
+                                <?php endif; ?>
+                            </div>
+                            <a href="portfolio-details.php?id=<?php echo $project['id']; ?>" class="btn btn-outline-custom btn-sm mt-2">View Details</a>
                         </div>
                     </div>
                 </div>
@@ -615,7 +668,7 @@ foreach ($activeDistrictList as $district) {
     </section>
     <?php endif; ?>
 
-    <!-- Happy Customers Counters -->
+    <!-- Counters -->
     <section class="py-5">
         <div class="container">
             <div class="row g-4">
@@ -644,7 +697,7 @@ foreach ($activeDistrictList as $district) {
         </div>
     </section>
 
-    <!-- Bangladesh Map – District-level green circles -->
+    <!-- Bangladesh Map -->
     <section class="py-5">
         <div class="container">
             <div class="text-center mb-4">
@@ -655,7 +708,7 @@ foreach ($activeDistrictList as $district) {
         </div>
     </section>
 
-    <!-- Trusted by Innovators (logo slider) -->
+    <!-- Trusted by Innovators -->
     <section class="trusted-section py-5">
         <div class="container">
             <div class="text-center mb-5"><h2>Trusted by Innovators</h2><p class="text-muted-custom">Global leaders who trust our expertise</p></div>
@@ -676,7 +729,7 @@ foreach ($activeDistrictList as $district) {
         </div>
     </section>
 
-    <!-- Client Testimonials Swiper (all approved testimonials) -->
+    <!-- Testimonials -->
     <section class="py-5">
         <div class="container">
             <div class="text-center mb-5">
@@ -689,7 +742,13 @@ foreach ($activeDistrictList as $district) {
                     <div class="swiper-slide">
                         <div class="testimonial-card h-100">
                             <i class="fas fa-quote-left fa-2x text-primary mb-3 opacity-50"></i>
-                            <p class="fst-italic">"<?php echo htmlspecialchars($testimonial['testimonial_text']); ?>"</p>
+                            <div class="card-text-wrapper description-text">
+                                <span class="truncated-text"><?php echo htmlspecialchars(substr($testimonial['testimonial_text'], 0, 120)); ?><?php echo strlen($testimonial['testimonial_text']) > 120 ? '...' : ''; ?></span>
+                                <span class="full-text"><?php echo htmlspecialchars($testimonial['testimonial_text']); ?></span>
+                                <?php if(strlen($testimonial['testimonial_text']) > 120): ?>
+                                <span class="read-more-btn" onclick="toggleReadMore(this)">Read more</span>
+                                <?php endif; ?>
+                            </div>
                             <div class="mt-3">
                                 <h5 class="mb-0"><?php echo htmlspecialchars($testimonial['client_name']); ?></h5>
                                 <small class="text-muted-custom">
@@ -744,7 +803,7 @@ foreach ($activeDistrictList as $district) {
     </div>
 </div>
 
-<!-- Testimonial Modal (for submitting new testimonial) -->
+<!-- Testimonial Submit Modal -->
 <div class="modal fade" id="testimonialModal" tabindex="-1">
     <div class="modal-dialog modal-md">
         <div class="modal-content">
@@ -801,15 +860,32 @@ foreach ($activeDistrictList as $district) {
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // Full height for hero slider
-    function setFullHeight() { const hero = document.querySelector('.hero-slider'); if(hero && window.innerHeight) hero.style.height = window.innerHeight + 'px'; }
+    function setFullHeight() { 
+        const hero = document.querySelector('.hero-slider'); 
+        if(hero) hero.style.height = window.innerHeight + 'px';
+    }
     window.addEventListener('resize', setFullHeight);
     setFullHeight();
 
-    // Hero Slider
-    new Swiper('.heroSwiper', { loop:true, autoplay:{delay:5000,disableOnInteraction:false}, effect:'fade', pagination:{el:'.swiper-pagination',clickable:true}, navigation:{nextEl:'.swiper-button-next',prevEl:'.swiper-button-prev'} });
+    // Hero Swiper
+    new Swiper('.heroSwiper', { 
+        loop: true, 
+        autoplay: { delay: 5000, disableOnInteraction: false }, 
+        effect: 'fade', 
+        pagination: { el: '.swiper-pagination', clickable: true }, 
+        navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' } 
+    });
 
-    // Logo Slider
-    new Swiper('.logoSlider', { slidesPerView:2, spaceBetween:15, loop:true, autoplay:{delay:2500,disableOnInteraction:false}, breakpoints:{576:{slidesPerView:3},768:{slidesPerView:4},1024:{slidesPerView:6}}, pagination:{el:'.logo-pagination',clickable:true}, navigation:{nextEl:'.logo-next',prevEl:'.logo-prev'} });
+    // Logo Swiper
+    new Swiper('.logoSlider', { 
+        slidesPerView: 2, 
+        spaceBetween: 15, 
+        loop: true, 
+        autoplay: { delay: 2500, disableOnInteraction: false }, 
+        breakpoints: { 576: { slidesPerView: 3 }, 768: { slidesPerView: 4 }, 1024: { slidesPerView: 6 } }, 
+        pagination: { el: '.logo-pagination', clickable: true }, 
+        navigation: { nextEl: '.logo-next', prevEl: '.logo-prev' } 
+    });
 
     // Testimonial Swiper
     new Swiper('.testimonialSwiper', {
@@ -822,11 +898,31 @@ foreach ($activeDistrictList as $district) {
         breakpoints: { 640: { slidesPerView: 2 }, 992: { slidesPerView: 3 } }
     });
 
-    // Counters
+    // Counters animation
     function initCounters() {
         const counters = document.querySelectorAll('.counter-num');
-        const observer = new IntersectionObserver((entries)=>{ entries.forEach(entry=>{ if(entry.isIntersecting){ const c=entry.target; const target=+c.dataset.target; let curr=0; const inc=target/50; const upd=()=>{ curr+=inc; if(curr<target){ c.innerText=Math.ceil(curr); requestAnimationFrame(upd); } else c.innerText=target; }; upd(); observer.unobserve(c); } }); }, {threshold:0.5});
-        counters.forEach(c=>observer.observe(c));
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const c = entry.target;
+                    const target = +c.dataset.target;
+                    let curr = 0;
+                    const inc = target / 50;
+                    const upd = () => {
+                        curr += inc;
+                        if (curr < target) {
+                            c.innerText = Math.ceil(curr);
+                            requestAnimationFrame(upd);
+                        } else {
+                            c.innerText = target;
+                        }
+                    };
+                    upd();
+                    observer.unobserve(c);
+                }
+            });
+        }, { threshold: 0.5 });
+        counters.forEach(c => observer.observe(c));
     }
 
     // Bangladesh Map
@@ -835,22 +931,76 @@ foreach ($activeDistrictList as $district) {
         const activeDistricts = <?php echo json_encode($activeDistrictsData); ?>;
         const isDark = document.body.classList.contains('dark');
         const tileUrl = isDark ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-        map = L.map('bangladeshMap').setView([23.8,90.3],7.2);
-        L.tileLayer(tileUrl,{attribution:'&copy; OSM'}).addTo(map);
-        activeDistricts.forEach(d=>{ L.circleMarker([d.lat,d.lng],{radius:12,fillColor:"#10b981",color:"#fff",weight:2,fillOpacity:0.85}).addTo(map).bindPopup(`<b>${d.name} District</b><br>✅ Active AR Service Area`); });
+        map = L.map('bangladeshMap').setView([23.8, 90.3], 7.2);
+        L.tileLayer(tileUrl, { attribution: '&copy; OSM' }).addTo(map);
+        activeDistricts.forEach(d => {
+            L.circleMarker([d.lat, d.lng], { radius: 12, fillColor: "#10b981", color: "#fff", weight: 2, fillOpacity: 0.85 })
+                .addTo(map)
+                .bindPopup(`<b>${d.name} District</b><br>✅ Active AR Service Area`);
+        });
     }
-    function updateMapTiles() { if(!map) return; const isDark=document.body.classList.contains('dark'); const newTile=isDark?'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png':'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'; map.eachLayer(layer=>{ if(layer instanceof L.TileLayer) map.removeLayer(layer); }); L.tileLayer(newTile,{attribution:'&copy; OSM'}).addTo(map); }
+    function updateMapTiles() {
+        if (!map) return;
+        const isDark = document.body.classList.contains('dark');
+        const newTile = isDark ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        map.eachLayer(layer => { if (layer instanceof L.TileLayer) map.removeLayer(layer); });
+        L.tileLayer(newTile, { attribution: '&copy; OSM' }).addTo(map);
+    }
 
     // Dark Mode
-    function initDarkMode() { const toggle=document.getElementById('darkModeToggle'); if(localStorage.getItem('darkMode')==='enabled'){ document.body.classList.add('dark'); toggle.innerHTML='<i class="fas fa-sun"></i>'; } else toggle.innerHTML='<i class="fas fa-moon"></i>'; toggle.addEventListener('click',()=>{ document.body.classList.toggle('dark'); const isDark=document.body.classList.contains('dark'); localStorage.setItem('darkMode',isDark?'enabled':'disabled'); toggle.innerHTML=isDark?'<i class="fas fa-sun"></i>':'<i class="fas fa-moon"></i>'; updateMapTiles(); }); }
+    function initDarkMode() {
+        const toggle = document.getElementById('darkModeToggle');
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            document.body.classList.add('dark');
+            toggle.innerHTML = '<i class="fas fa-sun"></i>';
+        } else {
+            toggle.innerHTML = '<i class="fas fa-moon"></i>';
+        }
+        toggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+            const isDark = document.body.classList.contains('dark');
+            localStorage.setItem('darkMode', isDark ? 'enabled' : 'disabled');
+            toggle.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            updateMapTiles();
+        });
+    }
 
-    // Navbar scroll
-    function initNavbarScroll() { const navbar=document.querySelector('.glass-nav'); window.addEventListener('scroll',()=>{ if(window.scrollY>50) navbar.classList.add('scrolled'); else navbar.classList.remove('scrolled'); }); }
+    // Navbar scroll effect
+    function initNavbarScroll() {
+        const navbar = document.querySelector('.glass-nav');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) navbar.classList.add('scrolled');
+            else navbar.classList.remove('scrolled');
+        });
+    }
 
     // Back to top
-    function initBackToTop() { const btn=document.getElementById('backToTop'); window.addEventListener('scroll',()=>{ if(window.scrollY>300) btn.classList.add('show'); else btn.classList.remove('show'); }); btn.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'})); }
+    function initBackToTop() {
+        const btn = document.getElementById('backToTop');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) btn.classList.add('show');
+            else btn.classList.remove('show');
+        });
+        btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    }
 
-    // Registration & Popup Logic
+    // Read more toggle
+    function toggleReadMore(btn) {
+        const wrapper = btn.parentNode;
+        const truncated = wrapper.querySelector('.truncated-text');
+        const full = wrapper.querySelector('.full-text');
+        if (full.style.display === 'none' || getComputedStyle(full).display === 'none') {
+            truncated.style.display = 'none';
+            full.style.display = 'inline';
+            btn.innerText = 'Read less';
+        } else {
+            truncated.style.display = 'inline';
+            full.style.display = 'none';
+            btn.innerText = 'Read more';
+        }
+    }
+
+    // Registration & modals logic
     let userRegistered = sessionStorage.getItem('userRegistered') === 'true';
     let userName = sessionStorage.getItem('userName') || '';
     let userEmail = sessionStorage.getItem('userEmail') || '';
@@ -860,74 +1010,101 @@ foreach ($activeDistrictList as $district) {
     const chatModal = new bootstrap.Modal(document.getElementById('chatModal'));
 
     function openTestimonialModal() {
-        if(userRegistered){
+        if (userRegistered) {
             document.getElementById('testimonialName').value = userName;
             document.getElementById('testimonialEmail').value = userEmail;
             testimonialModal.show();
-        } else { registerModal.show(); sessionStorage.setItem('pendingAction','testimonial'); }
+        } else {
+            registerModal.show();
+            sessionStorage.setItem('pendingAction', 'testimonial');
+        }
     }
     function openChatModal() {
-        if(userRegistered){
+        if (userRegistered) {
             document.getElementById('chatName').value = userName;
             document.getElementById('chatEmail').value = userEmail;
             chatModal.show();
-        } else { registerModal.show(); sessionStorage.setItem('pendingAction','chat'); }
+        } else {
+            registerModal.show();
+            sessionStorage.setItem('pendingAction', 'chat');
+        }
     }
 
-    document.getElementById('registerForm').addEventListener('submit', (e)=>{
+    document.getElementById('registerForm').addEventListener('submit', (e) => {
         e.preventDefault();
         const name = document.getElementById('regName').value.trim();
         const email = document.getElementById('regEmail').value.trim();
-        if(name && email){
-            sessionStorage.setItem('userRegistered','true');
-            sessionStorage.setItem('userName',name);
-            sessionStorage.setItem('userEmail',email);
-            userRegistered=true; userName=name; userEmail=email;
+        if (name && email) {
+            sessionStorage.setItem('userRegistered', 'true');
+            sessionStorage.setItem('userName', name);
+            sessionStorage.setItem('userEmail', email);
+            userRegistered = true; userName = name; userEmail = email;
             registerModal.hide();
             const action = sessionStorage.getItem('pendingAction');
-            if(action==='testimonial') openTestimonialModal();
-            else if(action==='chat') openChatModal();
+            if (action === 'testimonial') openTestimonialModal();
+            else if (action === 'chat') openChatModal();
             sessionStorage.removeItem('pendingAction');
         }
     });
 
-    document.getElementById('testimonialBtn').addEventListener('click',()=>{ if(!userRegistered){ sessionStorage.setItem('pendingAction','testimonial'); registerModal.show(); } else openTestimonialModal(); });
-    document.getElementById('chatBtn').addEventListener('click',()=>{ if(!userRegistered){ sessionStorage.setItem('pendingAction','chat'); registerModal.show(); } else openChatModal(); });
+    document.getElementById('testimonialBtn').addEventListener('click', () => {
+        if (!userRegistered) {
+            sessionStorage.setItem('pendingAction', 'testimonial');
+            registerModal.show();
+        } else openTestimonialModal();
+    });
+    document.getElementById('chatBtn').addEventListener('click', () => {
+        if (!userRegistered) {
+            sessionStorage.setItem('pendingAction', 'chat');
+            registerModal.show();
+        } else openChatModal();
+    });
 
     // Submit testimonial
-    document.getElementById('testimonialForm')?.addEventListener('submit', async (e)=>{
+    document.getElementById('testimonialForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const fd = new FormData();
         fd.append('client_name', userName);
         fd.append('email', userEmail);
         fd.append('testimonial_text', document.getElementById('testimonialText').value);
         fd.append('rating', document.getElementById('testimonialRating').value);
-        const res = await fetch('submit_testimonial.php', { method:'POST', body:fd });
+        const res = await fetch('submit_testimonial.php', { method: 'POST', body: fd });
         const data = await res.json();
         const msgDiv = document.getElementById('testimonialMessage');
-        if(data.success){
+        if (data.success) {
             msgDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
-            setTimeout(()=>{ testimonialModal.hide(); msgDiv.innerHTML=''; document.getElementById('testimonialForm').reset(); },3000);
-        } else { msgDiv.innerHTML = `<div class="alert alert-danger">${data.message}</div>`; }
+            setTimeout(() => { testimonialModal.hide(); msgDiv.innerHTML = ''; document.getElementById('testimonialForm').reset(); }, 3000);
+        } else {
+            msgDiv.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+        }
     });
 
     // Submit chat
-    document.getElementById('chatForm')?.addEventListener('submit', async (e)=>{
+    document.getElementById('chatForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const fd = new FormData();
         fd.append('name', userName);
         fd.append('email', userEmail);
         fd.append('message', document.getElementById('chatMessage').value);
-        const res = await fetch('submit_chat.php', { method:'POST', body:fd });
+        const res = await fetch('submit_chat.php', { method: 'POST', body: fd });
         const data = await res.json();
         const msgDiv = document.getElementById('chatMessageDiv');
-        if(data.success){
+        if (data.success) {
             msgDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
-            setTimeout(()=>{ chatModal.hide(); msgDiv.innerHTML=''; document.getElementById('chatForm').reset(); },3000);
-        } else { msgDiv.innerHTML = `<div class="alert alert-danger">${data.message}</div>`; }
+            setTimeout(() => { chatModal.hide(); msgDiv.innerHTML = ''; document.getElementById('chatForm').reset(); }, 3000);
+        } else {
+            msgDiv.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+        }
     });
 
-    document.addEventListener('DOMContentLoaded', ()=>{ initCounters(); initMap(); initDarkMode(); initNavbarScroll(); initBackToTop(); setFullHeight(); });
+    document.addEventListener('DOMContentLoaded', () => {
+        initCounters();
+        initMap();
+        initDarkMode();
+        initNavbarScroll();
+        initBackToTop();
+        setFullHeight();
+    });
 </script>
 </body>
 </html>
