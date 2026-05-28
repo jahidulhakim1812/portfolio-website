@@ -104,13 +104,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         body.dark .glass-nav.scrolled {
             background: rgba(10, 10, 15, 0.98);
         }
+        /* Navbar brand with logo and text */
         .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
             font-size: 1.6rem;
             font-weight: 800;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
+            transition: opacity 0.2s;
+        }
+        .navbar-brand img {
+            height: 44px;
+            width: auto;
+            max-width: 180px;
+            display: inline-block;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
+        }
+        body.dark .navbar-brand img {
+            filter: brightness(0.9);
+        }
+        @media (max-width: 576px) {
+            .navbar-brand img {
+                height: 34px;
+            }
+            .navbar-brand {
+                font-size: 1.3rem;
+                gap: 0.4rem;
+            }
         }
         .nav-link {
             font-weight: 600;
@@ -263,7 +287,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         footer a:hover {
             color: var(--secondary);
         }
-         footer .text-muted {
+        footer .text-muted {
             color: white !important;
         }
         /* Floating message icon */
@@ -333,16 +357,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
 </head>
 <body>
 
-<!-- Navbar (identical to index.php) -->
+<!-- Navbar with Logo (path: uploads/logo.png) -->
 <nav class="navbar navbar-expand-lg glass-nav" id="mainNavbar">
-    <div class="container">
-        <a class="navbar-brand" href="index.php"><i class="fas fa-vr-cardboard me-2"></i>ARTECH</a>
+    <div class="container-fluid">
+        <a class="navbar-brand" href="index.php">
+            <img src="uploads/logo.png" alt="ARTECH Logo">
+            ARTECH
+        </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item"><a class="nav-link" href="index.php">Home</a></li>
+                <li class="nav-item"><a class="nav-link " href="services.php">Services</a></li>
                 <li class="nav-item"><a class="nav-link" href="portfolio.php">Portfolio</a></li>
                 <li class="nav-item"><a class="nav-link" href="chairman-speech.php">Chairman</a></li>
                 <li class="nav-item"><a class="nav-link active" href="contact.php">Contact</a></li>
@@ -355,12 +383,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
 
 <main>
     <!-- Page Hero -->
-    <section class="page-hero">
-        <div class="container">
-            <h1 class="display-4 fw-bold">Contact Us</h1>
-            <p class="lead text-muted-custom">We'd love to hear from you. Get in touch for any inquiries.</p>
-        </div>
-    </section>
+  
 
     <div class="container py-5">
         <div class="row g-5">

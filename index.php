@@ -128,16 +128,40 @@ foreach ($activeDistrictList as $district) {
         body.dark .glass-nav.scrolled {
             background: rgba(10, 10, 15, 0.98);
         }
-          footer .text-muted {
+        footer .text-muted {
             color: white !important;
         }
+        /* Navbar brand with logo and text */
         .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
             font-size: 1.6rem;
             font-weight: 800;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
+            transition: opacity 0.2s;
+        }
+        .navbar-brand img {
+            height: 44px;
+            width: auto;
+            max-width: 180px;
+            display: inline-block;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
+        }
+        body.dark .navbar-brand img {
+            filter: brightness(0.9);
+        }
+        @media (max-width: 576px) {
+            .navbar-brand img {
+                height: 34px;
+            }
+            .navbar-brand {
+                font-size: 1.3rem;
+                gap: 0.4rem;
+            }
         }
         .nav-link {
             font-weight: 600;
@@ -195,7 +219,16 @@ foreach ($activeDistrictList as $district) {
             height: 100%;
             object-fit: cover;
             object-position: center center;
-            filter: brightness(0.6);
+        }
+        /* Dark overlay for better text contrast */
+        .slide-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 1;
         }
         .hero-content {
             position: relative;
@@ -487,14 +520,18 @@ foreach ($activeDistrictList as $district) {
 </head>
 <body>
 
-<!-- Navbar -->
+<!-- Navbar with Logo (path: uploads/logo.png) -->
 <nav class="navbar navbar-expand-lg glass-nav" id="mainNavbar">
     <div class="container-fluid">
-        <a class="navbar-brand" href="index.php"><i class="fas fa-vr-cardboard me-2"></i>ARTECH</a>
+        <a class="navbar-brand" href="index.php">
+            <img src="uploads/logo.png" alt="ARTECH Logo">
+            ARTECH
+        </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item"><a class="nav-link active" href="index.php">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="services.php">Services</a></li>
                 <li class="nav-item"><a class="nav-link" href="portfolio.php">Portfolio</a></li>
                 <li class="nav-item"><a class="nav-link" href="chairman-speech.php">Chairman</a></li>
                 <li class="nav-item"><a class="nav-link" href="contact.php">Contact</a></li>
@@ -506,13 +543,14 @@ foreach ($activeDistrictList as $district) {
 </nav>
 
 <main>
-    <!-- Hero Slider -->
+    <!-- Hero Slider with Overlay -->
     <section class="hero-slider">
         <div class="swiper heroSwiper">
             <div class="swiper-wrapper">
                 <?php foreach($sliders as $slide): ?>
                 <div class="swiper-slide">
                     <img src="<?php echo htmlspecialchars($slide['image_url']); ?>" class="slide-bg" alt="<?php echo htmlspecialchars($slide['title']); ?>">
+                    <div class="slide-overlay"></div>
                     <div class="hero-content container d-flex flex-column justify-content-center h-100">
                         <h1 class="hero-title"><?php echo htmlspecialchars($slide['title']); ?></h1>
                         <p class="fs-4"><?php echo htmlspecialchars($slide['subtitle']); ?></p>
@@ -540,7 +578,7 @@ foreach ($activeDistrictList as $district) {
             <div class="row g-4">
                 <?php foreach($services as $service): ?>
                 <div class="col-6 col-md-4 col-lg-3 service-col">
-                    <a href="<?php echo htmlspecialchars($service['link_url']); ?>" class="text-decoration-none">
+                    <a href="service-details.php?id=<?php echo $service['id']; ?>" class="text-decoration-none">
                         <div class="glass-card h-100 d-flex flex-column">
                             <?php if(!empty($service['image_url'])): ?>
                                 <img src="<?php echo htmlspecialchars($service['image_url']); ?>" class="card-img-top" alt="<?php echo htmlspecialchars($service['title']); ?>">
@@ -558,7 +596,10 @@ foreach ($activeDistrictList as $district) {
                                     <span class="read-more-btn" onclick="toggleReadMore(this)">Read more</span>
                                     <?php endif; ?>
                                 </div>
-                                <span class="btn btn-outline-custom btn-sm mt-2">Learn More →</span>
+                                <?php if(!empty($service['price']) && $service['price'] > 0): ?>
+                                    <div class="mt-2"><span class="badge bg-success fs-6">$<?php echo number_format($service['price'], 2); ?></span></div>
+                                <?php endif; ?>
+                                <span class="btn btn-outline-custom btn-sm mt-2">View Details →</span>
                             </div>
                         </div>
                     </a>

@@ -61,7 +61,7 @@ $teamMembers = $pdo->query("SELECT * FROM team_members WHERE is_active = 1 ORDER
             font-family: 'Space Grotesk', sans-serif;
             font-weight: 700;
         }
-        /* Navbar exactly as requested */
+        /* Navbar */
         .glass-nav {
             position: relative;
             top: 0;
@@ -86,14 +86,37 @@ $teamMembers = $pdo->query("SELECT * FROM team_members WHERE is_active = 1 ORDER
         body.dark .glass-nav.scrolled {
             background: rgba(10, 10, 15, 0.98);
         }
+        /* Navbar brand with logo and text */
         .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
             font-size: 1.6rem;
             font-weight: 800;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            letter-spacing: -0.5px;
+            transition: opacity 0.2s;
+        }
+        .navbar-brand img {
+            height: 44px;
+            width: auto;
+            max-width: 180px;
+            display: inline-block;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
+        }
+        body.dark .navbar-brand img {
+            filter: brightness(0.9);
+        }
+        @media (max-width: 576px) {
+            .navbar-brand img {
+                height: 34px;
+            }
+            .navbar-brand {
+                font-size: 1.3rem;
+                gap: 0.4rem;
+            }
         }
         .nav-link {
             font-weight: 600;
@@ -271,9 +294,8 @@ $teamMembers = $pdo->query("SELECT * FROM team_members WHERE is_active = 1 ORDER
         }
         footer a:hover {
             color: var(--secondary);
-
         }
-          footer .text-muted {
+        footer .text-muted {
             color: white !important;
         }
         /* Floating message & back to top */
@@ -345,16 +367,20 @@ $teamMembers = $pdo->query("SELECT * FROM team_members WHERE is_active = 1 ORDER
 </head>
 <body>
 
-<!-- Navbar -->
+<!-- Navbar with Logo (path: uploads/logo.png) -->
 <nav class="navbar navbar-expand-lg glass-nav" id="mainNavbar">
-    <div class="container">
-        <a class="navbar-brand" href="index.php">ARTECH</a>
+    <div class="container-fluid">
+        <a class="navbar-brand" href="index.php">
+            <img src="uploads/logo.png" alt="ARTECH Logo">
+            ARTECH
+        </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item"><a class="nav-link" href="index.php">Home</a></li>
+                <li class="nav-item"><a class="nav-link " href="services.php">Services</a></li>
                 <li class="nav-item"><a class="nav-link" href="portfolio.php">Portfolio</a></li>
                 <li class="nav-item"><a class="nav-link active" href="chairman-speech.php">Chairman</a></li>
                 <li class="nav-item"><a class="nav-link" href="contact.php">Contact</a></li>
@@ -367,12 +393,7 @@ $teamMembers = $pdo->query("SELECT * FROM team_members WHERE is_active = 1 ORDER
 
 <main>
     <!-- Hero -->
-    <section class="page-hero">
-        <div class="container">
-            <h1 class="display-4 fw-bold">Chairman's Speech</h1>
-            <p class="lead text-muted-custom">Vision, Mission & the Road Ahead</p>
-        </div>
-    </section>
+ 
 
     <!-- Chairman Speech Content -->
     <section class="py-5">

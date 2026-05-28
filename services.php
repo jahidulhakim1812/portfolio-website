@@ -1,5 +1,5 @@
 <?php
-// services.php - Display all services from database
+// services.php - Display all services from database with images, full description toggle, search filter, and price
 require_once 'config.php';
 
 // Fetch all services ordered by ID
@@ -55,7 +55,7 @@ $services = $pdo->query("SELECT * FROM services ORDER BY id ASC")->fetchAll();
             font-family: 'Space Grotesk', sans-serif;
             font-weight: 700;
         }
-        /* Navbar exactly as reference */
+        /* Navbar */
         .glass-nav {
             position: relative;
             top: 0;
@@ -80,14 +80,37 @@ $services = $pdo->query("SELECT * FROM services ORDER BY id ASC")->fetchAll();
         body.dark .glass-nav.scrolled {
             background: rgba(10, 10, 15, 0.98);
         }
+        /* Navbar brand with logo and text */
         .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
             font-size: 1.6rem;
             font-weight: 800;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            letter-spacing: -0.5px;
+            transition: opacity 0.2s;
+        }
+        .navbar-brand img {
+            height: 44px;
+            width: auto;
+            max-width: 180px;
+            display: inline-block;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
+        }
+        body.dark .navbar-brand img {
+            filter: brightness(0.9);
+        }
+        @media (max-width: 576px) {
+            .navbar-brand img {
+                height: 34px;
+            }
+            .navbar-brand {
+                font-size: 1.3rem;
+                gap: 0.4rem;
+            }
         }
         .nav-link {
             font-weight: 600;
@@ -136,15 +159,41 @@ $services = $pdo->query("SELECT * FROM services ORDER BY id ASC")->fetchAll();
         body.dark .page-hero {
             background: var(--surface-dark);
         }
-        /* Service Cards (identical to homepage) */
+        /* Search Box */
+        .search-container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .search-input {
+            border-radius: 60px;
+            padding: 0.8rem 1.5rem;
+            border: 1px solid var(--border-light);
+            background: var(--bg-light);
+            color: var(--text-light);
+            width: 100%;
+            font-size: 1rem;
+            box-shadow: var(--shadow);
+        }
+        body.dark .search-input {
+            background: var(--surface-dark);
+            border-color: var(--border-dark);
+            color: var(--text-dark);
+        }
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+        }
+        /* Service Cards */
         .service-card {
             background: var(--surface-light);
             border-radius: 28px;
             border: 1px solid var(--border-light);
             transition: all 0.3s;
-            padding: 1.8rem;
             height: 100%;
-            text-align: center;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
             box-shadow: var(--shadow);
         }
         body.dark .service-card {
@@ -155,9 +204,101 @@ $services = $pdo->query("SELECT * FROM services ORDER BY id ASC")->fetchAll();
             transform: translateY(-8px);
             box-shadow: 0 20px 30px -12px rgba(0, 0, 0, 0.2);
         }
-        .service-icon i {
-            font-size: 2.8rem;
+        .service-img {
+            width: 100%;
+            height: 200px;
+            object-fit: contain;
+            object-position: center;
+            background: var(--surface-light);
+        }
+        .service-icon-fallback {
+            width: 100%;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-size: 3.5rem;
+        }
+        .service-body {
+            padding: 1.5rem;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .service-title {
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+        .price-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            font-weight: 700;
+            font-size: 0.85rem;
+            padding: 4px 12px;
+            border-radius: 30px;
+            margin-bottom: 0.75rem;
+        }
+        .service-description {
+            color: var(--text-muted-light);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 1.25rem;
+            flex-grow: 1;
+        }
+        body.dark .service-description {
+            color: var(--text-muted-dark);
+        }
+        .truncated-text {
+            display: inline;
+        }
+        .full-text {
+            display: none;
+        }
+        .read-more-btn {
             color: var(--primary);
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-left: 5px;
+            text-decoration: none;
+        }
+        .read-more-btn:hover {
+            text-decoration: underline;
+        }
+        .btn-outline-custom {
+            border: 2px solid var(--primary);
+            background: transparent;
+            border-radius: 40px;
+            padding: 6px 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--primary);
+            text-decoration: none;
+            display: inline-block;
+            transition: 0.2s;
+            text-align: center;
+            align-self: flex-start;
+            margin-top: 0.5rem;
+        }
+        body.dark .btn-outline-custom {
+            color: var(--secondary);
+            border-color: var(--secondary);
+        }
+        .btn-outline-custom:hover {
+            background: var(--primary);
+            color: white;
+        }
+        body.dark .btn-outline-custom:hover {
+            background: var(--secondary);
+            color: var(--bg-dark);
+        }
+        .no-results {
+            text-align: center;
+            padding: 3rem;
         }
         /* Footer */
         footer {
@@ -176,7 +317,7 @@ $services = $pdo->query("SELECT * FROM services ORDER BY id ASC")->fetchAll();
         footer a:hover {
             color: var(--secondary);
         }
-        /* Floating message & back to top */
+        /* Floating & back to top */
         .floating-msg {
             position: fixed;
             bottom: 30px;
@@ -217,7 +358,7 @@ $services = $pdo->query("SELECT * FROM services ORDER BY id ASC")->fetchAll();
             color: white;
         }
         .back-to-top.show { opacity: 1; }
-        /* Responsive Grid */
+        /* Responsive */
         @media (max-width: 768px) {
             .navbar-collapse {
                 background: rgba(255,255,255,0.95);
@@ -232,6 +373,23 @@ $services = $pdo->query("SELECT * FROM services ORDER BY id ASC")->fetchAll();
                 flex: 0 0 50%;
                 max-width: 50%;
             }
+            .service-img, .service-icon-fallback {
+                height: 170px;
+            }
+            .service-body {
+                padding: 1rem;
+            }
+            .service-title {
+                font-size: 1.1rem;
+            }
+            .service-description {
+                font-size: 0.8rem;
+            }
+        }
+        @media (max-width: 480px) {
+            .service-img, .service-icon-fallback {
+                height: 150px;
+            }
         }
         .text-muted-custom {
             color: var(--text-muted-light);
@@ -239,46 +397,26 @@ $services = $pdo->query("SELECT * FROM services ORDER BY id ASC")->fetchAll();
         body.dark .text-muted-custom {
             color: var(--text-muted-dark);
         }
-        .btn-outline-custom {
-            border: 2px solid var(--primary);
-            background: transparent;
-            border-radius: 40px;
-            padding: 8px 24px;
-            color: var(--primary);
-            font-weight: 500;
-            text-decoration: none;
-            display: inline-block;
-            transition: 0.2s;
-        }
-        body.dark .btn-outline-custom {
-            color: var(--secondary);
-            border-color: var(--secondary);
-        }
-        .btn-outline-custom:hover {
-            background: var(--primary);
-            color: white;
-        }
-        body.dark .btn-outline-custom:hover {
-            background: var(--secondary);
-            color: var(--bg-dark);
-        }
     </style>
 </head>
 <body>
 
-<!-- Navbar -->
+<!-- Navbar with Logo (path: uploads/logo.png) -->
 <nav class="navbar navbar-expand-lg glass-nav" id="mainNavbar">
-    <div class="container">
-        <a class="navbar-brand" href="index.php">ARTECH</a>
+    <div class="container-fluid">
+        <a class="navbar-brand" href="index.php">
+            <img src="uploads/logo.png" alt="ARTECH Logo">
+            ARTECH
+        </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item"><a class="nav-link" href="index.php">Home</a></li>
+                <li class="nav-item"><a class="nav-link active" href="services.php">Services</a></li>
                 <li class="nav-item"><a class="nav-link" href="portfolio.php">Portfolio</a></li>
                 <li class="nav-item"><a class="nav-link" href="chairman-speech.php">Chairman</a></li>
-                <li class="nav-item"><a class="nav-link active" href="services.php">Services</a></li>
                 <li class="nav-item"><a class="nav-link" href="contact.php">Contact</a></li>
                 <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
             </ul>
@@ -289,30 +427,55 @@ $services = $pdo->query("SELECT * FROM services ORDER BY id ASC")->fetchAll();
 
 <main>
     <!-- Hero Section -->
-    <section class="page-hero">
+  
+
+    <!-- Search Bar -->
+    <section class="py-4">
         <div class="container">
-            <h1 class="display-4 fw-bold">Our Services</h1>
-            <p class="lead text-muted-custom">Cutting-edge AR/VR solutions for modern enterprises</p>
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search services by title or description...">
+            </div>
         </div>
     </section>
 
     <!-- Services Grid -->
-    <section class="py-5">
+    <section class="py-4">
         <div class="container">
-            <div class="row g-4">
+            <div class="row g-4" id="servicesGrid">
                 <?php if(count($services) > 0): ?>
                     <?php foreach($services as $service): ?>
-                    <div class="col-6 col-md-6 col-lg-3 service-col">
-                        <div class="service-card">
-                            <div class="service-icon mb-3">
-                                <i class="<?php echo htmlspecialchars($service['icon_class']); ?> fa-3x"></i>
+                    <div class="col-6 col-md-6 col-lg-3 service-col" data-title="<?php echo strtolower(htmlspecialchars($service['title'])); ?>" data-desc="<?php echo strtolower(htmlspecialchars($service['description'])); ?>">
+                        <a href="service-details.php?id=<?php echo $service['id']; ?>" class="text-decoration-none">
+                            <div class="service-card">
+                                <?php if(!empty($service['image_url'])): ?>
+                                    <img src="<?php echo htmlspecialchars($service['image_url']); ?>" class="service-img" alt="<?php echo htmlspecialchars($service['title']); ?>">
+                                <?php else: ?>
+                                    <div class="service-icon-fallback">
+                                        <i class="<?php echo htmlspecialchars($service['icon_class']); ?> fa-3x"></i>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="service-body">
+                                    <h4 class="service-title"><?php echo htmlspecialchars($service['title']); ?></h4>
+                                    <?php if(!empty($service['price']) && $service['price'] > 0): ?>
+                                        <div class="price-badge">$<?php echo number_format($service['price'], 2); ?></div>
+                                    <?php endif; ?>
+                                    <div class="service-description">
+                                        <?php 
+                                        $desc = htmlspecialchars($service['description']);
+                                        $maxLen = 100;
+                                        if(strlen($desc) > $maxLen): 
+                                        ?>
+                                            <span class="truncated-text"><?php echo substr($desc, 0, $maxLen); ?>...</span>
+                                            <span class="full-text"><?php echo $desc; ?></span>
+                                            <span class="read-more-btn" onclick="toggleReadMore(this)">Read more</span>
+                                        <?php else: ?>
+                                            <span><?php echo $desc; ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <span class="btn-outline-custom">View Details →</span>
+                                </div>
                             </div>
-                            <h4 class="fs-5 fw-bold"><?php echo htmlspecialchars($service['title']); ?></h4>
-                            <p class="text-muted-custom small"><?php echo htmlspecialchars($service['description']); ?></p>
-                            <?php if(!empty($service['link_url'])): ?>
-                            <a href="<?php echo htmlspecialchars($service['link_url']); ?>" class="btn-outline-custom btn-sm mt-2">Learn More →</a>
-                            <?php endif; ?>
-                        </div>
+                        </a>
                     </div>
                     <?php endforeach; ?>
                 <?php else: ?>
@@ -322,6 +485,12 @@ $services = $pdo->query("SELECT * FROM services ORDER BY id ASC")->fetchAll();
                         <p>Check back soon for our service offerings.</p>
                     </div>
                 <?php endif; ?>
+            </div>
+            <!-- No results message (hidden by default) -->
+            <div id="noResultsMsg" class="no-results" style="display: none;">
+                <i class="fas fa-search fa-3x text-muted-custom mb-3"></i>
+                <h4>No services found</h4>
+                <p class="text-muted-custom">Try adjusting your search term.</p>
             </div>
         </div>
     </section>
@@ -368,6 +537,58 @@ $services = $pdo->query("SELECT * FROM services ORDER BY id ASC")->fetchAll();
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // Toggle read more / read less
+    function toggleReadMore(btn) {
+        const wrapper = btn.parentNode;
+        const truncated = wrapper.querySelector('.truncated-text');
+        const full = wrapper.querySelector('.full-text');
+        if (full.style.display === 'none' || getComputedStyle(full).display === 'none') {
+            truncated.style.display = 'none';
+            full.style.display = 'inline';
+            btn.innerText = 'Read less';
+        } else {
+            truncated.style.display = 'inline';
+            full.style.display = 'none';
+            btn.innerText = 'Read more';
+        }
+    }
+
+    // Search / Filter functionality
+    function initSearch() {
+        const searchInput = document.getElementById('searchInput');
+        const serviceCards = document.querySelectorAll('.service-col');
+        const noResultsMsg = document.getElementById('noResultsMsg');
+        const servicesGrid = document.getElementById('servicesGrid');
+
+        if (!searchInput) return;
+
+        searchInput.addEventListener('keyup', function() {
+            const searchTerm = this.value.trim().toLowerCase();
+            let visibleCount = 0;
+
+            serviceCards.forEach(card => {
+                const title = card.getAttribute('data-title') || '';
+                const desc = card.getAttribute('data-desc') || '';
+                const matches = title.includes(searchTerm) || desc.includes(searchTerm);
+
+                if (searchTerm === '' || matches) {
+                    card.style.display = '';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            if (visibleCount === 0) {
+                noResultsMsg.style.display = 'block';
+                servicesGrid.classList.add('justify-content-center');
+            } else {
+                noResultsMsg.style.display = 'none';
+                servicesGrid.classList.remove('justify-content-center');
+            }
+        });
+    }
+
     // Dark Mode Toggle
     function initDarkMode() {
         const toggleBtn = document.getElementById('darkModeToggle');
@@ -418,6 +639,7 @@ $services = $pdo->query("SELECT * FROM services ORDER BY id ASC")->fetchAll();
         initDarkMode();
         initNavbarScroll();
         initBackToTop();
+        initSearch();
     });
 </script>
 </body>
