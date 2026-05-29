@@ -84,12 +84,34 @@ if (!$portfolio) {
             background: rgba(10,10,15,0.98);
         }
         .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
             font-size: 1.6rem;
             font-weight: 800;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
+        }
+        .navbar-brand img {
+            height: 44px;
+            width: auto;
+            max-width: 180px;
+            display: inline-block;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
+        }
+        body.dark .navbar-brand img {
+            filter: brightness(0.9);
+        }
+        @media (max-width: 576px) {
+            .navbar-brand img {
+                height: 34px;
+            }
+            .navbar-brand {
+                font-size: 1.3rem;
+                gap: 0.4rem;
+            }
         }
         .nav-link {
             font-weight: 600;
@@ -128,7 +150,7 @@ if (!$portfolio) {
             background: rgba(124,58,237,0.3);
             color: var(--secondary);
         }
-        /* Detail Card */
+        /* Detail Card - now split into two columns */
         .detail-card {
             background: var(--surface-light);
             border-radius: 32px;
@@ -136,20 +158,45 @@ if (!$portfolio) {
             overflow: hidden;
             box-shadow: var(--shadow);
             margin-top: 2rem;
+            display: flex;
+            flex-wrap: wrap;
         }
         body.dark .detail-card {
             background: var(--surface-dark);
             border-color: var(--border-dark);
         }
-        /* Full image - no cropping */
+        /* Left side: image (no cropping) */
+        .detail-image-col {
+            flex: 1;
+            min-width: 280px;
+            background: var(--surface-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
         .detail-img {
             width: 100%;
             height: auto;
-            max-height: 500px;
+            max-height: 450px;
             object-fit: contain;
-            background: var(--surface-light);
+            border-radius: 24px;
         }
-        .detail-body {
+        .fallback-img {
+            width: 100%;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 24px;
+            color: white;
+            font-size: 4rem;
+        }
+        /* Right side: details */
+        .detail-details-col {
+            flex: 1;
+            min-width: 280px;
             padding: 2rem;
         }
         .client-badge {
@@ -241,8 +288,18 @@ if (!$portfolio) {
         }
         .back-to-top.show { opacity: 1; }
         @media (max-width: 768px) {
-            .detail-img { max-height: 300px; }
-            .detail-body { padding: 1.5rem; }
+            .detail-image-col, .detail-details-col {
+                flex: 0 0 100%;
+            }
+            .detail-image-col {
+                padding: 1rem 1rem 0 1rem;
+            }
+            .detail-details-col {
+                padding: 1.5rem;
+            }
+            .detail-img {
+                max-height: 280px;
+            }
             .client-badge { font-size: 0.8rem; }
             .btn-back, .btn-primary-custom { padding: 8px 20px; font-size: 0.9rem; }
         }
@@ -256,19 +313,23 @@ if (!$portfolio) {
 </head>
 <body>
 
-<!-- Navbar -->
+<!-- Navbar with Logo (path: uploads/logo.png) -->
 <nav class="navbar navbar-expand-lg glass-nav" id="mainNavbar">
-    <div class="container">
-        <a class="navbar-brand" href="index.php">ARTECH</a>
+    <div class="container-fluid">
+        <a class="navbar-brand" href="index.php">
+            <img src="uploads/logo.png" alt="ARTECH Logo">
+            ARTECH
+        </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item"><a class="nav-link" href="index.php">Home</a></li>
-                <li class="nav-item"><a class="nav-link" href="services.php">Services</a></li>
-                <li class="nav-item"><a class="nav-link active" href="portfolio.php">Portfolio</a></li>
-                <li class="nav-item"><a class="nav-link" href="chairman-speech.php">Chairman</a></li>
+                <li class="nav-item"><a class="nav-link " href="services.php">Services</a></li>
+                <li class="nav-item"><a class="nav-link" href="courses.php">Courses</a></li>
+                <li class="nav-item"><a class="nav-link" href="portfolio.php">Portfolio</a></li>
+                <li class="nav-item"><a class="nav-link active" href="chairman-speech.php">Chairman</a></li>
                 <li class="nav-item"><a class="nav-link" href="contact.php">Contact</a></li>
                 <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
             </ul>
@@ -280,14 +341,18 @@ if (!$portfolio) {
 <main>
     <div class="container py-5">
         <div class="detail-card">
-            <?php if(!empty($portfolio['image_url'])): ?>
-                <img src="<?php echo htmlspecialchars($portfolio['image_url']); ?>" class="detail-img" alt="<?php echo htmlspecialchars($portfolio['title']); ?>">
-            <?php else: ?>
-                <div class="detail-img d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, var(--primary), var(--secondary)); min-height: 300px;">
-                    <i class="fas fa-image fa-5x text-white opacity-75"></i>
-                </div>
-            <?php endif; ?>
-            <div class="detail-body">
+            <!-- Left Column: Image -->
+            <div class="detail-image-col">
+                <?php if(!empty($portfolio['image_url'])): ?>
+                    <img src="<?php echo htmlspecialchars($portfolio['image_url']); ?>" class="detail-img" alt="<?php echo htmlspecialchars($portfolio['title']); ?>">
+                <?php else: ?>
+                    <div class="fallback-img">
+                        <i class="fas fa-image fa-5x"></i>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <!-- Right Column: Details -->
+            <div class="detail-details-col">
                 <div class="client-badge">
                     <i class="fas fa-building"></i> <?php echo htmlspecialchars($portfolio['client']); ?>
                 </div>
@@ -316,33 +381,7 @@ if (!$portfolio) {
 </main>
 
 <!-- Footer -->
-<footer>
-    <div class="container">
-        <div class="row">
-            <div class="col-md-4 mb-4">
-                <h5 class="fw-bold">ARTECH</h5>
-                <p class="text-muted">Augmenting reality with precision and innovation.</p>
-            </div>
-            <div class="col-md-4 mb-4">
-                <h5>Quick Links</h5>
-                <ul class="list-unstyled">
-                    <li><a href="index.php">Home</a></li>
-                    <li><a href="portfolio.php">Portfolio</a></li>
-                    <li><a href="services.php">Services</a></li>
-                    <li><a href="contact.php">Contact</a></li>
-                </ul>
-            </div>
-            <div class="col-md-4 mb-4">
-                <h5>Connect</h5>
-                <p><i class="fas fa-envelope me-2"></i> hello@artechsolutions.com</p>
-                <p><i class="fas fa-phone me-2"></i> +1 (823) 456-5588</p>
-                <p><i class="fas fa-map-marker-alt me-2"></i> 123 AR Avenue, Tech Valley</p>
-            </div>
-        </div>
-        <hr class="opacity-25">
-        <div class="text-center small">&copy; <?php echo date('Y'); ?> AR Tech Solutions. All rights reserved.</div>
-    </div>
-</footer>
+<?php include 'footer.php'; ?>
 
 <div class="back-to-top" id="backToTop">
     <i class="fas fa-arrow-up"></i>

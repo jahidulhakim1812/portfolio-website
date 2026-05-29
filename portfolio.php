@@ -342,6 +342,7 @@ $portfolioItems = $pdo->query("SELECT * FROM portfolios WHERE status = 1 ORDER B
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item"><a class="nav-link" href="index.php">Home</a></li>
                 <li class="nav-item"><a class="nav-link" href="services.php">Services</a></li>
+                <li class="nav-item"><a class="nav-link" href="courses.php">Courses</a></li>
                 <li class="nav-item"><a class="nav-link active" href="portfolio.php">Portfolio</a></li>
                 <li class="nav-item"><a class="nav-link" href="chairman-speech.php">Chairman</a></li>
                 <li class="nav-item"><a class="nav-link" href="contact.php">Contact</a></li>

@@ -1,5 +1,5 @@
 <?php
-// service-details.php - Display full service information with full image (no cropping)
+// service-details.php - Display full service information with split layout: image left (full, no cropping), description right
 require_once 'config.php';
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -111,6 +111,7 @@ if (!$service) {
             height: 44px;
             color: var(--primary);
         }
+        /* Detail card split layout */
         .detail-card {
             background: var(--surface-light);
             border-radius: 32px;
@@ -123,26 +124,60 @@ if (!$service) {
             background: var(--surface-dark);
             border-color: var(--border-dark);
         }
-        /* Image shows fully without cropping */
-        .detail-img {
+        /* Image column: full image visible, no cropping */
+        .service-image-col {
+            background: var(--surface-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        body.dark .service-image-col {
+            background: var(--surface-dark);
+        }
+        .service-full-img {
             width: 100%;
             height: auto;
             max-height: 500px;
-            object-fit: contain;
-            background: var(--surface-light);
+            object-fit: contain;  /* ensures the entire image is visible without cropping */
+            display: block;
+            border-radius: 24px;
+            background: var(--bg-light);
+            transition: all 0.2s;
         }
-        .detail-icon-fallback {
+        body.dark .service-full-img {
+            background: var(--bg-dark);
+        }
+        /* Fallback icon container (when no image) */
+        .service-icon-fallback {
             width: 100%;
-            height: 400px;
+            min-height: 380px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
             font-size: 5rem;
+            border-radius: 24px;
         }
+        /* Right side content styling */
         .detail-body {
-            padding: 2rem;
+            padding: 2rem 2rem 2rem 1rem;
+        }
+        @media (max-width: 768px) {
+            .detail-body {
+                padding: 1.8rem;
+            }
+            .service-image-col {
+                padding: 1rem;
+            }
+            .service-full-img {
+                max-height: 320px;
+            }
+            .service-icon-fallback {
+                min-height: 280px;
+                font-size: 3.5rem;
+            }
         }
         .price-tag {
             font-size: 2rem;
@@ -159,6 +194,7 @@ if (!$service) {
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            transition: all 0.2s;
         }
         .btn-back:hover {
             background: var(--primary);
@@ -179,7 +215,12 @@ if (!$service) {
             transform: translateY(-3px);
             box-shadow: 0 10px 20px rgba(124, 58, 237, 0.3);
         }
-        /* Footer Styles (matching other pages) */
+        .description-text {
+            font-size: 1.1rem;
+            line-height: 1.7;
+            margin: 1.5rem 0;
+        }
+        /* Footer Styles */
         footer {
             background: #0f172a;
             color: #cbd5e1;
@@ -196,10 +237,7 @@ if (!$service) {
         footer a:hover {
             color: var(--secondary);
         }
-        footer .text-muted {
-            color: white !important;
-        }
-        /* Floating message icon (optional but included for consistency) */
+        /* Floating message icon */
         .floating-msg {
             position: fixed;
             bottom: 30px;
@@ -240,12 +278,6 @@ if (!$service) {
             color: white;
         }
         .back-to-top.show { opacity: 1; }
-        @media (max-width: 768px) {
-            .detail-img { max-height: 300px; }
-            .detail-icon-fallback { height: 250px; }
-            .detail-body { padding: 1.5rem; }
-            .price-tag { font-size: 1.5rem; }
-        }
     </style>
 </head>
 <body>
@@ -273,44 +305,56 @@ if (!$service) {
         </div>
     </div>
 </nav>
+
 <main>
     <div class="container py-5">
         <div class="detail-card">
-            <?php if(!empty($service['image_url'])): ?>
-                <img src="<?php echo htmlspecialchars($service['image_url']); ?>" class="detail-img" alt="<?php echo htmlspecialchars($service['title']); ?>">
-            <?php else: ?>
-                <div class="detail-icon-fallback">
-                    <i class="<?php echo htmlspecialchars($service['icon_class']); ?> fa-5x"></i>
+            <div class="row g-0">
+                <!-- LEFT COLUMN: Service Image (full, no cropping) -->
+                <div class="col-md-6 service-image-col">
+                    <?php if(!empty($service['image_url'])): ?>
+                        <img src="<?php echo htmlspecialchars($service['image_url']); ?>" 
+                             class="service-full-img" 
+                             alt="<?php echo htmlspecialchars($service['title']); ?>">
+                    <?php else: ?>
+                        <div class="service-icon-fallback">
+                            <i class="<?php echo htmlspecialchars($service['icon_class']); ?> fa-5x"></i>
+                        </div>
+                    <?php endif; ?>
                 </div>
-            <?php endif; ?>
-            <div class="detail-body">
-                <h1 class="display-5 fw-bold"><?php echo htmlspecialchars($service['title']); ?></h1>
                 
-                <?php if(!empty($service['price']) && $service['price'] > 0): ?>
-                    <div class="price-tag my-3">$<?php echo number_format($service['price'], 2); ?></div>
-                <?php else: ?>
-                    <div class="text-muted my-3">Price on request</div>
-                <?php endif; ?>
+                <!-- RIGHT COLUMN: Description, Price, Buttons -->
+                <div class="col-md-6">
+                    <div class="detail-body">
+                        <h1 class="display-5 fw-bold"><?php echo htmlspecialchars($service['title']); ?></h1>
+                        
+                        <?php if(!empty($service['price']) && $service['price'] > 0): ?>
+                            <div class="price-tag my-3">$<?php echo number_format($service['price'], 2); ?></div>
+                        <?php else: ?>
+                            <div class="text-muted my-3">Price on request</div>
+                        <?php endif; ?>
 
-                <div class="description-text" style="font-size: 1.1rem; line-height: 1.7;">
-                    <?php echo nl2br(htmlspecialchars($service['description'])); ?>
-                </div>
+                        <div class="description-text">
+                            <?php echo nl2br(htmlspecialchars($service['description'])); ?>
+                        </div>
 
-                <?php if(!empty($service['link_url'])): ?>
-                    <div class="mt-4">
-                        <a href="<?php echo htmlspecialchars($service['link_url']); ?>" class="btn-primary-custom">Get Started →</a>
+                        <?php if(!empty($service['link_url'])): ?>
+                            <div class="mt-4">
+                                <a href="<?php echo htmlspecialchars($service['link_url']); ?>" class="btn-primary-custom">Get Started →</a>
+                            </div>
+                        <?php endif; ?>
+
+                        <div class="mt-5">
+                            <a href="services.php" class="btn-back"><i class="fas fa-arrow-left"></i> Back to Services</a>
+                        </div>
                     </div>
-                <?php endif; ?>
-
-                <div class="mt-5">
-                    <a href="services.php" class="btn-back"><i class="fas fa-arrow-left"></i> Back to Services</a>
                 </div>
             </div>
         </div>
     </div>
 </main>
 
-<!-- ========== FULL FOOTER (matching other pages) ========== -->
+<!-- ========== FULL FOOTER ========== -->
 <footer>
     <div class="container">
         <div class="row">
@@ -340,7 +384,7 @@ if (!$service) {
     </div>
 </footer>
 
-<!-- Floating Message Icon (optional, consistent with other pages) -->
+<!-- Floating Message Icon -->
 <div class="floating-msg" id="floatingMsg">
     <i class="fas fa-comment-dots"></i>
 </div>
@@ -372,7 +416,6 @@ if (!$service) {
         });
         btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
     }
-    // Floating message alert (same as other pages)
     document.getElementById('floatingMsg')?.addEventListener('click', () => {
         alert('Live chat support coming soon! 📱');
     });
