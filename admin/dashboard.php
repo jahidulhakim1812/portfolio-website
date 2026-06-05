@@ -1,66 +1,140 @@
 <?php
-// admin/dashboard.php - Full Intelligence Dashboard with functional charts, AJAX, and navigation.php integration
+// admin/dashboard.php - Full Intelligence Dashboard with purchase-based revenue
 require_once 'auth.php';
 require_once '../config.php';
 
 /* =========================================
-   FETCH ALL DYNAMIC DATA (Courses + All Content)
+   CHECK TABLES AND FETCH DYNAMIC DATA
 ========================================= */
 
-// Check if courses table exists
-$tableExists = false;
+$coursesExist = false;
+$purchasesExist = false;
+
 try {
-    $check = $pdo->query("SHOW TABLES LIKE 'courses'")->rowCount();
-    $tableExists = ($check > 0);
-} catch (Exception $e) {
-    $tableExists = false;
-}
-
-// COURSE DATA
-if ($tableExists) {
-    $totalCourses = $pdo->query("SELECT COUNT(*) FROM courses WHERE status = 1")->fetchColumn();
-    $totalEnrollments = $pdo->query("SELECT SUM(enrolled_students) FROM courses WHERE status = 1")->fetchColumn() ?: 0;
-    $totalRevenue = $pdo->query("SELECT SUM(price * enrolled_students) FROM courses WHERE status = 1")->fetchColumn() ?: 0;
-    $avgPrice = $pdo->query("SELECT AVG(price) FROM courses WHERE status = 1")->fetchColumn() ?: 0;
-    $mostEnrolled = $pdo->query("SELECT title, enrolled_students, price FROM courses WHERE status = 1 ORDER BY enrolled_students DESC LIMIT 1")->fetch();
-    $highestRevenue = $pdo->query("SELECT title, price * enrolled_students as revenue FROM courses WHERE status = 1 ORDER BY revenue DESC LIMIT 1")->fetch();
-    $recentCourses = $pdo->query("SELECT id, title, price, enrolled_students, status FROM courses ORDER BY id DESC LIMIT 5")->fetchAll();
-    $allCourses = $pdo->query("SELECT id, title, price, enrolled_students, status FROM courses WHERE status = 1 ORDER BY id DESC LIMIT 10")->fetchAll();
-    $courseNames = [];
-    $courseEnrollments = [];
-    $courseData = $pdo->query("SELECT title, enrolled_students FROM courses WHERE status = 1 ORDER BY enrolled_students DESC LIMIT 5")->fetchAll();
-    foreach ($courseData as $c) {
-        $courseNames[] = $c['title'];
-        $courseEnrollments[] = $c['enrolled_students'];
+    $checkCourses = $pdo->query("SHOW TABLES LIKE 'courses'")->rowCount();
+    $coursesExist = ($checkCourses > 0);
+    if ($coursesExist) {
+        $checkPurchases = $pdo->query("SHOW TABLES LIKE 'purchases'")->rowCount();
+        $purchasesExist = ($checkPurchases > 0);
     }
-} else {
-    $totalCourses = $totalEnrollments = $totalRevenue = $avgPrice = 0;
-    $mostEnrolled = $highestRevenue = null;
-    $recentCourses = $allCourses = [];
-    $courseNames = $courseEnrollments = [];
+} catch (Exception $e) {
+    $coursesExist = false;
+    $purchasesExist = false;
 }
 
-// OTHER CONTENT COUNTS
+// Initialize variables
+$totalCourses = 0;
+$totalEnrollments = 0;
+$totalRevenue = 0;
+$avgPrice = 0;
+$mostEnrolled = null;
+$highestRevenue = null;
+$courseNames = [];
+$courseEnrollments = [];
+$allCourses = [];
+$recentPurchases = [];
+$months = [];
+$revenueByMonth = [];
+
+if ($coursesExist) {
+    // Basic course stats
+    $totalCourses = $pdo->query("SELECT COUNT(*) FROM courses WHERE status = 1")->fetchColumn();
+    $avgPrice = $pdo->query("SELECT AVG(price) FROM courses WHERE status = 1")->fetchColumn() ?: 0;
+    $allCourses = $pdo->query("SELECT id, title, price, enrolled_students, status FROM courses WHERE status = 1 ORDER BY id DESC LIMIT 10")->fetchAll();
+
+    if ($purchasesExist) {
+        // --- REVENUE & ENROLLMENTS FROM PURCHASES TABLE ---
+        $totalEnrollments = $pdo->query("SELECT COUNT(*) FROM purchases")->fetchColumn();
+        $totalRevenue = $pdo->query("SELECT COALESCE(SUM(amount), 0) FROM purchases")->fetchColumn();
+
+        // Most purchased course (by number of purchases)
+        $mostEnrolled = $pdo->query("
+            SELECT c.title, COUNT(p.id) as purchases 
+            FROM purchases p 
+            JOIN courses c ON p.course_id = c.id 
+            GROUP BY p.course_id 
+            ORDER BY purchases DESC LIMIT 1
+        ")->fetch();
+
+        // Highest revenue course (by sum of amounts)
+        $highestRevenue = $pdo->query("
+            SELECT c.title, SUM(p.amount) as revenue 
+            FROM purchases p 
+            JOIN courses c ON p.course_id = c.id 
+            GROUP BY p.course_id 
+            ORDER BY revenue DESC LIMIT 1
+        ")->fetch();
+
+        // Data for bar chart: course name vs number of purchases (top 5)
+        $courseData = $pdo->query("
+            SELECT c.title, COUNT(p.id) as purchases 
+            FROM purchases p 
+            JOIN courses c ON p.course_id = c.id 
+            GROUP BY p.course_id 
+            ORDER BY purchases DESC LIMIT 5
+        ")->fetchAll();
+        foreach ($courseData as $c) {
+            $courseNames[] = $c['title'];
+            $courseEnrollments[] = $c['purchases'];
+        }
+
+        // Monthly revenue trend (last 6 months from purchases)
+        for ($i = 5; $i >= 0; $i--) {
+            $monthStart = date('Y-m-01', strtotime("-$i months"));
+            $monthEnd = date('Y-m-t', strtotime("-$i months"));
+            $monthRevenue = $pdo->query("
+                SELECT COALESCE(SUM(amount), 0) 
+                FROM purchases 
+                WHERE purchase_date BETWEEN '$monthStart' AND '$monthEnd 23:59:59'
+            ")->fetchColumn();
+            $revenueByMonth[] = $monthRevenue;
+            $months[] = date('M', strtotime("-$i months"));
+        }
+
+        // Recent purchases for display
+        $recentPurchases = $pdo->query("
+            SELECT p.id, c.title as course_name, p.user_name, p.amount, p.purchase_date 
+            FROM purchases p 
+            JOIN courses c ON p.course_id = c.id 
+            ORDER BY p.purchase_date DESC LIMIT 10
+        ")->fetchAll();
+
+    } else {
+        // Fallback: no purchases table – use static course data
+        $totalEnrollments = $pdo->query("SELECT SUM(enrolled_students) FROM courses WHERE status = 1")->fetchColumn() ?: 0;
+        $totalRevenue = $pdo->query("SELECT SUM(price * enrolled_students) FROM courses WHERE status = 1")->fetchColumn() ?: 0;
+        $mostEnrolled = $pdo->query("SELECT title, enrolled_students, price FROM courses WHERE status = 1 ORDER BY enrolled_students DESC LIMIT 1")->fetch();
+        $highestRevenue = $pdo->query("SELECT title, price * enrolled_students as revenue FROM courses WHERE status = 1 ORDER BY revenue DESC LIMIT 1")->fetch();
+        $courseData = $pdo->query("SELECT title, enrolled_students FROM courses WHERE status = 1 ORDER BY enrolled_students DESC LIMIT 5")->fetchAll();
+        foreach ($courseData as $c) {
+            $courseNames[] = $c['title'];
+            $courseEnrollments[] = $c['enrolled_students'];
+        }
+        for ($i = 5; $i >= 0; $i--) {
+            $months[] = date('M', strtotime("-$i months"));
+        }
+        // Demo revenue data
+        $revenueByMonth = [3800, 6200, 5400, 8900, 11200, 14500];
+    }
+}
+
+// OTHER CONTENT COUNTS (sliders, services, etc.)
 $totalSliders = $pdo->query("SELECT COUNT(*) FROM sliders")->fetchColumn();
 $totalServices = $pdo->query("SELECT COUNT(*) FROM services")->fetchColumn();
 $totalPortfolios = $pdo->query("SELECT COUNT(*) FROM portfolios")->fetchColumn();
 $totalTestimonials = $pdo->query("SELECT COUNT(*) FROM testimonials")->fetchColumn();
 $totalCustomers = $pdo->query("SELECT COUNT(*) FROM customers")->fetchColumn();
-$totalLocations = 8; // demo, adjust as needed
+$totalLocations = 8; // demo
 
-// RECENT ITEMS FOR BOXES
 $recentSliders = $pdo->query("SELECT id, title, status FROM sliders ORDER BY id DESC LIMIT 4")->fetchAll();
 $recentServices = $pdo->query("SELECT id, title FROM services ORDER BY id DESC LIMIT 4")->fetchAll();
 $recentPortfolios = $pdo->query("SELECT id, title, client FROM portfolios ORDER BY id DESC LIMIT 4")->fetchAll();
 
-// Month labels for chart
-$months = [];
-for ($i = 5; $i >= 0; $i--) $months[] = date('M', strtotime("-$i months"));
-
-// AJAX handlers (self)
+// AJAX handlers for adding course, updating fee, and simulating purchase
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
     header('Content-Type: application/json');
     $action = $_POST['action'] ?? '';
+    
     if ($action === 'add_course') {
         $title = trim($_POST['title'] ?? '');
         $price = floatval($_POST['price'] ?? 0);
@@ -74,6 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         }
         exit;
     }
+    
     if ($action === 'update_fee') {
         $id = intval($_POST['id']);
         $price = floatval($_POST['price']);
@@ -83,6 +158,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
             echo json_encode(['success' => true]);
         } else {
             echo json_encode(['success' => false]);
+        }
+        exit;
+    }
+    
+    if ($action === 'purchase_course' && $purchasesExist) {
+        $course_id = intval($_POST['course_id']);
+        $user_name = trim($_POST['user_name'] ?? 'Demo User');
+        $user_email = trim($_POST['user_email'] ?? 'demo@example.com');
+        
+        $stmt = $pdo->prepare("SELECT price FROM courses WHERE id = ? AND status = 1");
+        $stmt->execute([$course_id]);
+        $course = $stmt->fetch();
+        if ($course) {
+            $amount = $course['price'];
+            $stmt = $pdo->prepare("INSERT INTO purchases (course_id, user_name, user_email, amount) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$course_id, $user_name, $user_email, $amount]);
+            // Optionally update enrolled_students counter in courses table
+            $pdo->prepare("UPDATE courses SET enrolled_students = enrolled_students + 1 WHERE id = ?")->execute([$course_id]);
+            echo json_encode(['success' => true, 'amount' => $amount]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Course not found']);
         }
         exit;
     }
@@ -149,15 +245,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         }
         @keyframes floatBg { 0% { transform: translate(0,0); } 100% { transform: translate(100px, 80px); } }
         @keyframes floatBg2 { 0% { transform: translate(0,0); } 100% { transform: translate(-80px, -60px); } }
-        /* Main content area (sidebar handled by navigation.php) */
         .main {
             margin-left: 310px;
             padding: 20px;
             transition: margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .main.expand {
-            margin-left: 120px;
-        }
+        .main.expand { margin-left: 120px; }
         .topbar {
             display: flex;
             justify-content: space-between;
@@ -202,7 +295,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
             align-items: center;
             justify-content: center;
         }
-        /* Course Intelligence Hero Card */
         .hero-card {
             background: linear-gradient(135deg, rgba(124,58,237,0.2), rgba(6,182,212,0.1));
             border-radius: 2rem;
@@ -242,7 +334,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
             font-size: 2.2rem;
             font-weight: 800;
         }
-        /* Content Summary Boxes (6 cards) */
         .summary-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -273,10 +364,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
             margin-bottom: 0.8rem;
             color: var(--primary);
         }
-        .summary-number {
-            font-size: 1.8rem;
-            font-weight: 700;
-        }
+        .summary-number { font-size: 1.8rem; font-weight: 700; }
         .manage-btn {
             background: transparent;
             border: 1px solid var(--primary);
@@ -289,17 +377,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
             display: inline-block;
             margin-top: 0.5rem;
         }
-        .manage-btn:hover {
-            background: var(--primary);
-            color: white;
-        }
-        /* Charts & Tables */
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 25px;
-        }
+        .manage-btn:hover { background: var(--primary); color: white; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
         .panel {
             background: rgba(255,255,255,0.03);
             border-radius: 1.8rem;
@@ -324,20 +403,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
             font-size: 0.75rem;
             font-weight: 600;
         }
-        @media (max-width: 1000px) {
-            .grid-2 { grid-template-columns: 1fr; }
-        }
-        @media (max-width: 768px) {
-            .main { margin-left: 100px; }
-            .summary-grid { grid-template-columns: repeat(2, 1fr); }
-        }
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            padding: 20px;
-            color: var(--muted);
-            font-size: 0.8rem;
-        }
+        @media (max-width: 1000px) { .grid-2 { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .main { margin-left: 100px; } .summary-grid { grid-template-columns: repeat(2, 1fr); } }
+        .footer { text-align: center; margin-top: 30px; padding: 20px; color: var(--muted); font-size: 0.8rem; }
         .btn-add {
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             border: none;
@@ -345,6 +413,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
             padding: 0.6rem 1.5rem;
             color: white;
             font-weight: 600;
+        }
+        .btn-success-custom {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: none;
+            border-radius: 2rem;
+            padding: 0.6rem 1.5rem;
+            color: white;
+            font-weight: 600;
+            margin-left: 10px;
         }
         .modal-content {
             background: var(--panel);
@@ -360,10 +437,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
             font-size: 0.75rem;
             transition: 0.2s;
         }
-        .btn-sm-outline-primary:hover {
-            background: var(--primary);
-            color: white;
-        }
+        .btn-sm-outline-primary:hover { background: var(--primary); color: white; }
     </style>
 </head>
 <body>
@@ -379,24 +453,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         </div>
     </div>
 
-    <!-- 1. Course Intelligence Box -->
+    <!-- 1. Course Intelligence Box (purchase-based stats) -->
     <div class="hero-card">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-            <div><h1 style="font-size:2.5rem; font-weight:800;">Course<span style="color:var(--primary);"> Intelligence</span></h1>
-            <p style="color:var(--muted);">Enrollment analytics · Revenue tracking · Performance insights</p></div>
-            <button class="btn-add" data-bs-toggle="modal" data-bs-target="#addCourseModal"><i class="fas fa-plus me-2"></i>Add New Course</button>
+            <div>
+                <h1 style="font-size:2.5rem; font-weight:800;">Course<span style="color:var(--primary);"> Intelligence</span></h1>
+                <p style="color:var(--muted);">Real purchase revenue · Enrollment analytics · Performance insights</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-add" data-bs-toggle="modal" data-bs-target="#addCourseModal"><i class="fas fa-plus me-2"></i>Add Course</button>
+                <?php if ($purchasesExist): ?>
+                <button class="btn-success-custom" data-bs-toggle="modal" data-bs-target="#purchaseModal"><i class="fas fa-shopping-cart me-2"></i>Test Purchase</button>
+                <?php endif; ?>
+            </div>
         </div>
         <div class="stats-grid">
             <div class="stat-box"><div class="stat-icon"><i class="fas fa-book-open"></i></div><div class="stat-number"><?php echo $totalCourses; ?></div><div>Active Courses</div></div>
-            <div class="stat-box"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-number"><?php echo number_format($totalEnrollments); ?></div><div>Total Enrollments</div></div>
+            <div class="stat-box"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-number"><?php echo number_format($totalEnrollments); ?></div><div>Total Purchases</div></div>
             <div class="stat-box"><div class="stat-icon"><i class="fas fa-dollar-sign"></i></div><div class="stat-number">$<?php echo number_format($totalRevenue, 0); ?></div><div>Gross Revenue</div></div>
             <div class="stat-box"><div class="stat-icon"><i class="fas fa-tag"></i></div><div class="stat-number">$<?php echo number_format($avgPrice, 0); ?></div><div>Avg. Course Price</div></div>
-            <div class="stat-box"><div class="stat-icon"><i class="fas fa-trophy"></i></div><div class="stat-number"><?php echo $mostEnrolled ? htmlspecialchars($mostEnrolled['title']) : 'N/A'; ?></div><div>Most Enrolled</div><small><?php echo $mostEnrolled ? $mostEnrolled['enrolled_students'].' students' : ''; ?></small></div>
-            <div class="stat-box"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-number"><?php echo $highestRevenue ? '$'.number_format($highestRevenue['revenue'], 0) : '$0'; ?></div><div>Highest Revenue</div><small><?php echo $highestRevenue ? htmlspecialchars($highestRevenue['title']) : ''; ?></small></div>
+            <div class="stat-box"><div class="stat-icon"><i class="fas fa-trophy"></i></div><div class="stat-number"><?php echo $mostEnrolled ? htmlspecialchars($mostEnrolled['title']) : 'N/A'; ?></div><div>Most Purchased</div><small><?php echo $mostEnrolled ? ($purchasesExist ? $mostEnrolled['purchases'].' purchases' : $mostEnrolled['enrolled_students'].' students') : ''; ?></small></div>
+            <div class="stat-box"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-number"><?php echo $highestRevenue ? '$'.number_format($purchasesExist ? $highestRevenue['revenue'] : $highestRevenue['revenue'], 0) : '$0'; ?></div><div>Highest Revenue</div><small><?php echo $highestRevenue ? htmlspecialchars($highestRevenue['title']) : ''; ?></small></div>
         </div>
     </div>
 
-    <!-- 2. Content Summary Boxes (6 cards with Manage buttons) -->
+    <!-- 2. Content Summary Boxes (Manage buttons) -->
     <div class="summary-grid">
         <div class="summary-card"><div class="summary-icon"><i class="fas fa-images"></i></div><div class="summary-number"><?php echo $totalSliders; ?></div><div>Sliders</div><a href="manage_sliders.php" class="manage-btn">Manage</a></div>
         <div class="summary-card"><div class="summary-icon"><i class="fas fa-cogs"></i></div><div class="summary-number"><?php echo $totalServices; ?></div><div>Services</div><a href="manage_services.php" class="manage-btn">Manage</a></div>
@@ -406,13 +487,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         <div class="summary-card"><div class="summary-icon"><i class="fas fa-location-dot"></i></div><div class="summary-number"><?php echo $totalLocations; ?></div><div>Locations</div><a href="manage_locations.php" class="manage-btn">Manage</a></div>
     </div>
 
-    <!-- 3. Charts -->
+    <!-- 3. Charts (based on real purchase data) -->
     <div class="grid-2">
-        <div class="panel"><h4><i class="fas fa-chart-bar me-2"></i> Enrollments by Course</h4><canvas id="courseChart" height="200"></canvas></div>
-        <div class="panel"><h4><i class="fas fa-chart-line me-2"></i> Monthly Revenue Trend (Sample)</h4><canvas id="revenueChart" height="200"></canvas><small class="text-muted">*Demo data – connect to real transactions</small></div>
+        <div class="panel"><h4><i class="fas fa-chart-bar me-2"></i> Most Purchased Courses</h4><canvas id="courseChart" height="200"></canvas></div>
+        <div class="panel"><h4><i class="fas fa-chart-line me-2"></i> Monthly Revenue Trend (Actual Purchases)</h4><canvas id="revenueChart" height="200"></canvas></div>
     </div>
 
-    <!-- 4. All Courses Table -->
+    <!-- 4. Recent Purchases Table (if purchases exist) -->
+    <?php if ($purchasesExist && count($recentPurchases) > 0): ?>
+    <div class="panel mb-3">
+        <h4 class="mb-3"><i class="fas fa-history me-2"></i> Recent Purchases</h4>
+        <div class="table-responsive">
+            <table class="recent-table w-100">
+                <thead><tr style="color:var(--muted);"><th>Course</th><th>Customer</th><th>Amount</th><th>Date</th></tr></thead>
+                <tbody>
+                    <?php foreach($recentPurchases as $purchase): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($purchase['course_name']); ?></td>
+                        <td><?php echo htmlspecialchars($purchase['user_name']); ?></td>
+                        <td>$<?php echo number_format($purchase['amount'], 2); ?></td>
+                        <td><?php echo date('M d, Y', strtotime($purchase['purchase_date'])); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- 5. All Courses Table -->
     <div class="panel mb-3">
         <h4 class="mb-3"><i class="fas fa-list me-2"></i> All Courses</h4>
         <div class="table-responsive">
@@ -436,7 +539,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         </div>
     </div>
 
-    <!-- 5. Recent Data Panels (Sliders, Services, Portfolios) -->
+    <!-- 6. Recent Sliders, Services, Portfolios -->
     <div class="grid-2">
         <div class="panel"><h4><i class="fas fa-images me-2"></i> Recent Sliders</h4>
             <table class="recent-table w-100">
@@ -448,7 +551,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         </div>
         <div class="panel"><h4><i class="fas fa-cogs me-2"></i> Recent Services</h4>
             <table class="recent-table w-100">
-                <thead><tr style="color:var(--muted);"><th>Title</th><th></th><tr></thead>
+                <thead><tr style="color:var(--muted);"><th>Title</th><th></th></tr></thead>
                 <tbody><?php foreach($recentServices as $s): ?>
                 <tr><td><?php echo htmlspecialchars($s['title']); ?></td><td><a href="manage_services.php?edit=<?php echo $s['id']; ?>" class="btn-sm-outline-primary">Edit</a></td></tr>
                 <?php endforeach; ?></tbody>
@@ -465,7 +568,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         </table>
     </div>
 
-    <div class="footer">© 2025 NEXORA AI | Full Intelligence Dashboard · All modules integrated</div>
+    <div class="footer">© 2025 NEXORA AI | Full Intelligence Dashboard · Revenue tracked from actual purchases</div>
 </div>
 
 <!-- Add Course Modal -->
@@ -477,7 +580,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
                 <form id="addCourseForm">
                     <div class="mb-3"><label>Title</label><input type="text" id="courseTitle" class="form-control" required></div>
                     <div class="mb-3"><label>Price ($)</label><input type="number" step="0.01" id="coursePrice" class="form-control" required></div>
-                    <div class="mb-3"><label>Enrolled Students</label><input type="number" id="courseEnrolled" class="form-control" value="0"></div>
+                    <div class="mb-3"><label>Enrolled Students (initial)</label><input type="number" id="courseEnrolled" class="form-control" value="0"></div>
                     <button type="submit" class="btn btn-primary w-100">Create</button>
                 </form>
             </div>
@@ -500,9 +603,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
     </div>
 </div>
 
+<!-- Purchase Simulation Modal (only if purchases table exists) -->
+<?php if ($purchasesExist): ?>
+<div class="modal fade" id="purchaseModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Simulate Course Purchase</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <form id="purchaseForm">
+                    <div class="mb-3"><label>Select Course</label>
+                        <select id="purchaseCourseId" class="form-control" required>
+                            <option value="">-- Choose a course --</option>
+                            <?php foreach($allCourses as $c): ?>
+                            <option value="<?php echo $c['id']; ?>"><?php echo htmlspecialchars($c['title']); ?> ($<?php echo number_format($c['price'], 2); ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3"><label>Customer Name</label><input type="text" id="purchaseName" class="form-control" value="Demo Customer"></div>
+                    <div class="mb-3"><label>Email</label><input type="email" id="purchaseEmail" class="form-control" value="demo@example.com"></div>
+                    <button type="submit" class="btn btn-success w-100">Complete Purchase</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Theme toggle (sidebar state is handled by navigation.js)
+    // Theme toggle
     const themeToggle = document.getElementById('themeToggle');
     if (localStorage.getItem('nexoraTheme') === 'light') document.body.classList.add('light');
     themeToggle.addEventListener('click', () => {
@@ -513,14 +642,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
     });
     if(document.body.classList.contains('light')) themeToggle.innerHTML = '<i class="fas fa-moon"></i>'; else themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
 
-    <?php if ($tableExists): ?>
-    // Bar Chart: Enrollments by Course
+    <?php if ($coursesExist): ?>
+    // Bar Chart: Purchases by Course
     new Chart(document.getElementById('courseChart'), {
         type: 'bar',
         data: {
             labels: <?php echo json_encode($courseNames); ?>,
             datasets: [{
-                label: 'Enrolled Students',
+                label: 'Number of Purchases',
                 data: <?php echo json_encode($courseEnrollments); ?>,
                 backgroundColor: '#7c3aed',
                 borderRadius: 8
@@ -529,9 +658,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         options: {
             responsive: true,
             maintainAspectRatio: true,
-            plugins: {
-                legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--muted') } }
-            },
+            plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--muted') } } },
             scales: {
                 y: { ticks: { color: 'var(--muted)' }, grid: { color: 'rgba(255,255,255,0.05)' } },
                 x: { ticks: { color: 'var(--muted)' } }
@@ -539,14 +666,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         }
     });
 
-    // Line Chart: Monthly Revenue Trend (demo data)
+    // Line Chart: Monthly Revenue Trend
     new Chart(document.getElementById('revenueChart'), {
         type: 'line',
         data: {
             labels: <?php echo json_encode($months); ?>,
             datasets: [{
                 label: 'Monthly Revenue ($)',
-                data: [3800, 6200, 5400, 8900, 11200, 14500],
+                data: <?php echo json_encode($revenueByMonth); ?>,
                 borderColor: '#06b6d4',
                 backgroundColor: 'rgba(6,182,212,0.1)',
                 fill: true,
@@ -555,9 +682,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         },
         options: {
             responsive: true,
-            plugins: {
-                legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--muted') } }
-            },
+            plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--muted') } } },
             scales: {
                 x: { ticks: { color: 'var(--muted)' }, grid: { color: 'rgba(255,255,255,0.05)' } },
                 y: { ticks: { color: 'var(--muted)' }, grid: { color: 'rgba(255,255,255,0.05)' } }
@@ -565,7 +690,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         }
     });
 
-    // Add Course AJAX (self)
+    // Add Course AJAX
     document.getElementById('addCourseForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const fd = new FormData();
@@ -573,7 +698,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         fd.append('title', document.getElementById('courseTitle').value);
         fd.append('price', document.getElementById('coursePrice').value);
         fd.append('enrolled_students', document.getElementById('courseEnrolled').value);
-        const res = await fetch('dashboard.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
+        const res = await fetch(window.location.href, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
         const data = await res.json();
         if (data.success) location.reload();
         else alert('Error: ' + (data.message || 'Unknown error'));
@@ -594,11 +719,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         fd.append('action', 'update_fee');
         fd.append('id', document.getElementById('editCourseId').value);
         fd.append('price', document.getElementById('editCoursePrice').value);
-        const res = await fetch('dashboard.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
+        const res = await fetch(window.location.href, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
         const data = await res.json();
         if (data.success) location.reload();
         else alert('Update failed');
     });
+
+    <?php if ($purchasesExist): ?>
+    // Simulate Purchase AJAX
+    document.getElementById('purchaseForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const courseId = document.getElementById('purchaseCourseId').value;
+        if (!courseId) { alert('Please select a course'); return; }
+        const fd = new FormData();
+        fd.append('action', 'purchase_course');
+        fd.append('course_id', courseId);
+        fd.append('user_name', document.getElementById('purchaseName').value);
+        fd.append('user_email', document.getElementById('purchaseEmail').value);
+        const res = await fetch(window.location.href, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
+        const data = await res.json();
+        if (data.success) {
+            alert(`Purchase successful! $${data.amount} added to revenue.`);
+            location.reload();
+        } else {
+            alert('Purchase failed: ' + (data.message || 'Unknown error'));
+        }
+    });
+    <?php endif; ?>
 
     // Search courses
     document.getElementById('searchInput').addEventListener('keyup', function() {

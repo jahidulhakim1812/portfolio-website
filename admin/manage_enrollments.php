@@ -1,9 +1,9 @@
 <?php
-// admin/manage_enrollments.php - View enrolled students with course details
+// admin/manage_enrollments.php - Manage student enrollments with paid_at update
 require_once 'auth.php';
 require_once '../config.php';
 
-// Handle AJAX requests for delete and status update
+// Handle AJAX requests for delete and status update (now updates paid_at)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
     header('Content-Type: application/json');
     $action = $_POST['action'] ?? '';
@@ -21,9 +21,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         $status = $_POST['status'];
         $allowed = ['pending', 'completed', 'failed', 'cancelled'];
         if (in_array($status, $allowed)) {
-            $stmt = $pdo->prepare("UPDATE enrollments SET payment_status = ? WHERE id = ?");
-            $stmt->execute([$status, $id]);
-            echo json_encode(['success' => true]);
+            // If status is 'completed', set paid_at = NOW(); otherwise set paid_at = NULL
+            $paidAt = ($status === 'completed') ? date('Y-m-d H:i:s') : null;
+            $stmt = $pdo->prepare("UPDATE enrollments SET payment_status = ?, paid_at = ? WHERE id = ?");
+            $stmt->execute([$status, $paidAt, $id]);
+            echo json_encode(['success' => true, 'paid_at' => $paidAt]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Invalid status']);
         }
@@ -33,7 +35,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
 
 // Fetch enrollments with course title
 $enrollments = $pdo->query("
-    SELECT e.*, c.title as course_title 
+    SELECT 
+        e.*,
+        c.title as course_title 
     FROM enrollments e 
     LEFT JOIN courses c ON e.course_id = c.id 
     ORDER BY e.enrollment_date DESC
@@ -49,7 +53,7 @@ $enrollments = $pdo->query("
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
-        /* ========== NEXORA DASHBOARD STYLES (shared) ========== */
+        /* ========== NEXORA DASHBOARD STYLES (same as before) ========== */
         :root {
             --bg: #050816;
             --panel: #0f172a;
@@ -102,15 +106,12 @@ $enrollments = $pdo->query("
         }
         @keyframes floatBg { 0% { transform: translate(0,0); } 100% { transform: translate(100px, 80px); } }
         @keyframes floatBg2 { 0% { transform: translate(0,0); } 100% { transform: translate(-80px, -60px); } }
-        /* Main content area (sidebar handled by navigation.php) */
         .main {
             margin-left: 310px;
             padding: 20px;
             transition: margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .main.expand {
-            margin-left: 120px;
-        }
+        .main.expand { margin-left: 120px; }
         .topbar {
             display: flex;
             justify-content: space-between;
@@ -258,7 +259,7 @@ $enrollments = $pdo->query("
             <table class="enrollment-table w-100" id="enrollmentsTable">
                 <thead>
                     <tr>
-                        <th>ID</th><th>Student</th><th>Course</th><th>Amount</th><th>Status</th><th>Date</th><th>Actions</th>
+                        <th>ID</th><th>Student</th><th>Course</th><th>Amount</th><th>Status</th><th>Paid At</th><th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -272,13 +273,18 @@ $enrollments = $pdo->query("
                         </td>
                         <td><?php echo htmlspecialchars($e['course_title']); ?></td>
                         <td>$<?php echo number_format($e['amount'], 2); ?></td>
-                        <td>
+                        <td class="status-cell">
                             <select class="status-select status-update" data-id="<?php echo $e['id']; ?>">
                                 <option value="pending" <?php echo $e['payment_status'] == 'pending' ? 'selected' : ''; ?>>Pending</option>
                                 <option value="completed" <?php echo $e['payment_status'] == 'completed' ? 'selected' : ''; ?>>Completed</option>
                                 <option value="failed" <?php echo $e['payment_status'] == 'failed' ? 'selected' : ''; ?>>Failed</option>
                                 <option value="cancelled" <?php echo $e['payment_status'] == 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
                             </select>
+                            <div class="paid-at-display mt-1" style="font-size:0.7rem; color:var(--muted);">
+                                <?php if($e['paid_at'] && $e['paid_at'] != '0000-00-00 00:00:00'): ?>
+                                    <i class="fas fa-check-circle"></i> Paid: <?php echo date('d M Y H:i', strtotime($e['paid_at'])); ?>
+                                <?php endif; ?>
+                            </div>
                         </td>
                         <td><?php echo date('d M Y', strtotime($e['enrollment_date'])); ?></td>
                         <td>
@@ -291,15 +297,19 @@ $enrollments = $pdo->query("
                                 data-amount="<?php echo $e['amount']; ?>"
                                 data-status="<?php echo $e['payment_status']; ?>"
                                 data-transaction="<?php echo htmlspecialchars($e['transaction_id']); ?>"
+                                data-payment-method="<?php echo htmlspecialchars($e['payment_method']); ?>"
+                                data-price="<?php echo $e['price']; ?>"
+                                data-paid-at="<?php echo $e['paid_at']; ?>"
+                                data-created="<?php echo $e['created_at']; ?>"
                                 data-date="<?php echo date('d M Y, h:i A', strtotime($e['enrollment_date'])); ?>">
                                 <i class="fas fa-eye"></i> View
                             </button>
                             <button class="delete-btn btn-sm-custom" data-id="<?php echo $e['id']; ?>" style="border-color:var(--danger); color:var(--danger);"><i class="fas fa-trash"></i> Delete</button>
-                         </td>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
-            <tr>
+            </table>
         </div>
     </div>
     <div class="footer">© 2025 NEXORA AI | Enrollment Management</div>
@@ -319,10 +329,14 @@ $enrollments = $pdo->query("
                 <div class="mb-2"><strong>Phone:</strong> <span id="viewPhone"></span></div>
                 <div class="mb-2"><strong>Address:</strong> <span id="viewAddress"></span></div>
                 <div class="mb-2"><strong>Course:</strong> <span id="viewCourse"></span></div>
-                <div class="mb-2"><strong>Amount:</strong> <span id="viewAmount"></span></div>
+                <div class="mb-2"><strong>Amount (Paid):</strong> <span id="viewAmount"></span></div>
+                <div class="mb-2"><strong>Course Price (Original):</strong> <span id="viewPrice"></span></div>
+                <div class="mb-2"><strong>Payment Method:</strong> <span id="viewPaymentMethod"></span></div>
                 <div class="mb-2"><strong>Payment Status:</strong> <span id="viewStatus"></span></div>
                 <div class="mb-2"><strong>Transaction ID:</strong> <span id="viewTransaction"></span></div>
                 <div class="mb-2"><strong>Enrollment Date:</strong> <span id="viewDate"></span></div>
+                <div class="mb-2"><strong>Paid At:</strong> <span id="viewPaidAt"></span></div>
+                <div class="mb-2"><strong>Created At:</strong> <span id="viewCreatedAt"></span></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -355,7 +369,7 @@ $enrollments = $pdo->query("
         });
     });
 
-    // Update payment status via AJAX
+    // Update payment status via AJAX (updates paid_at automatically)
     document.querySelectorAll('.status-update').forEach(select => {
         select.addEventListener('change', async function() {
             const id = this.dataset.id;
@@ -367,23 +381,15 @@ $enrollments = $pdo->query("
             const res = await fetch('manage_enrollments.php', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
             const data = await res.json();
             if (data.success) {
-                // Update status badge in the row
-                const row = this.closest('tr');
-                const statusCell = row.cells[4];
-                let badgeClass = '';
-                if (status === 'pending') badgeClass = 'status-pending';
-                else if (status === 'completed') badgeClass = 'status-completed';
-                else if (status === 'failed') badgeClass = 'status-failed';
-                else badgeClass = 'status-cancelled';
-                statusCell.innerHTML = `<span class="status-badge ${badgeClass}">${status.charAt(0).toUpperCase() + status.slice(1)}</span>`;
-                // Also update the select value to match (already selected)
+                // Reload page to reflect updated paid_at and status badge
+                location.reload();
             } else {
                 alert('Update failed');
             }
         });
     });
 
-    // View modal
+    // View modal (with paid_at display)
     const viewModal = new bootstrap.Modal(document.getElementById('viewModal'));
     document.querySelectorAll('.view-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -393,11 +399,20 @@ $enrollments = $pdo->query("
             document.getElementById('viewAddress').innerText = btn.dataset.address || 'Not provided';
             document.getElementById('viewCourse').innerText = btn.dataset.course;
             document.getElementById('viewAmount').innerText = '$' + parseFloat(btn.dataset.amount).toFixed(2);
+            document.getElementById('viewPrice').innerText = btn.dataset.price ? '$' + parseFloat(btn.dataset.price).toFixed(2) : 'N/A';
+            document.getElementById('viewPaymentMethod').innerText = btn.dataset.paymentMethod || 'Not specified';
             let status = btn.dataset.status;
             let statusText = status.charAt(0).toUpperCase() + status.slice(1);
             document.getElementById('viewStatus').innerHTML = `<span class="status-badge status-${status}">${statusText}</span>`;
             document.getElementById('viewTransaction').innerText = btn.dataset.transaction || 'N/A';
             document.getElementById('viewDate').innerText = btn.dataset.date;
+            let paidAt = btn.dataset.paidAt;
+            if (paidAt && paidAt !== '0000-00-00 00:00:00') {
+                document.getElementById('viewPaidAt').innerText = new Date(paidAt).toLocaleString();
+            } else {
+                document.getElementById('viewPaidAt').innerText = 'Not paid yet';
+            }
+            document.getElementById('viewCreatedAt').innerText = btn.dataset.created ? new Date(btn.dataset.created).toLocaleString() : 'N/A';
             viewModal.show();
         });
     });
