@@ -1,5 +1,5 @@
 <?php
-// index.php - Ultimate 3D Tech Homepage with Full Database Integration
+// index.php - Ultimate 3D Tech Homepage with Perfect Image Display and Rounded Navbar Container
 require_once 'config.php';
 
 // Fetch all dynamic content
@@ -55,21 +55,21 @@ foreach ($activeDistrictList as $district) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="AR Tech Solutions - 3D Immersive Reality Experiences">
     <title>AR Tech Solutions | 3D Immersive Reality</title>
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <style>
+        /* ========== ALL CSS (PERFECT IMAGE DISPLAY) ========== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Space Grotesk', sans-serif;
             background: #050b17;
             color: #eef5ff;
             overflow-x: hidden;
+            transition: background 0.3s, color 0.3s;
         }
-        /* 3D Canvas Background */
         #three-canvas {
             position: fixed;
             top: 0;
@@ -81,20 +81,35 @@ foreach ($activeDistrictList as $district) {
         }
         .main-content { position: relative; z-index: 2; }
         
-        /* Glass Navigation */
+        /* ========== ROUNDED CONTAINER NAVBAR (NEW DESIGN) ========== */
         .glass-nav {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 92%;
+            max-width: 1400px;
             z-index: 1030;
-            background: rgba(5, 11, 23, 0.8);
+            background: rgba(5, 11, 23, 0.85);
             backdrop-filter: blur(16px);
-            border-bottom: 1px solid rgba(0, 212, 255, 0.4);
-            padding: 0.9rem 0;
-            transition: 0.3s;
+            border-radius: 60px;
+            border: 1px solid rgba(0, 212, 255, 0.4);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 20px rgba(0, 212, 255, 0.1);
+            padding: 0.5rem 1.5rem;
+            transition: all 0.3s;
         }
-        .glass-nav.scrolled { background: rgba(2, 6, 16, 0.98); padding: 0.6rem 0; }
+        .glass-nav.scrolled {
+            top: 12px;
+            background: rgba(5, 11, 23, 0.95);
+            border-color: rgba(0, 212, 255, 0.6);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 30px rgba(0, 212, 255, 0.2);
+        }
+        /* Adjust inner container padding */
+        .glass-nav .container {
+            padding: 0;
+            max-width: 100%;
+        }
+        /* Navbar brand remains same style */
         .navbar-brand {
             font-family: 'Orbitron', monospace;
             font-size: 1.7rem;
@@ -103,6 +118,12 @@ foreach ($activeDistrictList as $district) {
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
+        }
+        .navbar-brand img {
+            height: 40px;
+            filter: brightness(1.1);
+            display: inline-block;
+            margin-right: 8px;
         }
         .nav-link {
             font-family: 'Orbitron', monospace;
@@ -113,21 +134,12 @@ foreach ($activeDistrictList as $district) {
             color: rgba(238, 245, 255, 0.8) !important;
             border-radius: 40px;
             transition: 0.25s;
+            padding: 0.5rem 1rem !important;
         }
         .nav-link:hover, .nav-link.active {
             background: rgba(0, 212, 255, 0.25);
             color: #fff !important;
-        }
-        .btn-nav {
-            background: linear-gradient(90deg, #7b2fff, #00d4ff);
-            border: none;
-            padding: 0.5rem 1.4rem;
-            border-radius: 40px;
-            font-weight: 700;
-            color: white;
-            font-family: 'Orbitron', monospace;
-            font-size: 0.75rem;
-            box-shadow: 0 0 12px rgba(123,47,255,0.5);
+            box-shadow: 0 0 12px rgba(0,212,255,0.3);
         }
         #darkModeToggle {
             background: rgba(0,212,255,0.15);
@@ -136,9 +148,25 @@ foreach ($activeDistrictList as $district) {
             width: 40px;
             height: 40px;
             color: cyan;
+            transition: 0.2s;
         }
-        
-        /* Hero Slider */
+        .btn-nav {
+            background: linear-gradient(90deg, #7b2fff, #00d4ff);
+            border: none;
+            padding: 0.5rem 1.4rem;
+            border-radius: 40px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            color: white;
+            font-size: 0.75rem;
+            box-shadow: 0 0 12px rgba(123,47,255,0.5);
+            transition: 0.2s;
+        }
+        .btn-nav:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(123,47,255,0.7);
+        }
+        /* Rest of the CSS remains exactly as before */
         .hero-section {
             position: relative;
             width: 100%;
@@ -185,7 +213,6 @@ foreach ($activeDistrictList as $district) {
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.6)} }
         @keyframes fadeInDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
         @keyframes fadeInUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
-        
         .hero-title {
             font-family: 'Orbitron', monospace;
             font-size: clamp(2.5rem, 7vw, 6rem);
@@ -213,33 +240,53 @@ foreach ($activeDistrictList as $district) {
             backdrop-filter: blur(8px);
             width: 44px; height: 44px; border-radius: 50%;
         }
-        
-        /* Buttons */
-        .btn-3d-primary, .btn-3d-secondary {
+        .btn-3d-primary, .btn-3d-secondary, .btn-card, .btn-nav {
             font-family: 'Orbitron', monospace;
             font-weight: 700;
-            padding: 0.8rem 2rem;
             border-radius: 40px;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            transition: 0.2s;
+            transition: all 0.25s ease;
+            cursor: pointer;
+            border: none;
         }
         .btn-3d-primary {
             background: linear-gradient(90deg, #7b2fff, #00c3ff);
             color: white;
+            padding: 0.8rem 2rem;
             box-shadow: 0 8px 20px rgba(123,47,255,0.4);
         }
-        .btn-3d-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(123,47,255,0.6); color: white; }
+        .btn-3d-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 28px rgba(123,47,255,0.6);
+            color: white;
+        }
         .btn-3d-secondary {
             border: 2px solid #00d4ff;
             color: #00d4ff;
             background: transparent;
+            padding: 0.75rem 1.9rem;
         }
-        .btn-3d-secondary:hover { background: rgba(0,212,255,0.1); transform: translateY(-2px); color: #00d4ff; }
-        
-        /* Glass Cards */
+        .btn-3d-secondary:hover {
+            background: rgba(0,212,255,0.15);
+            transform: translateY(-3px);
+            color: #00d4ff;
+        }
+        .btn-card {
+            background: rgba(0,212,255,0.15);
+            border: 1px solid rgba(0,212,255,0.4);
+            color: #00d4ff;
+            padding: 0.4rem 1.2rem;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+        .btn-card:hover {
+            background: rgba(0,212,255,0.3);
+            transform: translateX(3px);
+            color: white;
+        }
         .card-3d, .counter-3d-card, .chairman-card, .testimonial-3d, .cta-3d-card {
             background: rgba(8, 16, 32, 0.7);
             backdrop-filter: blur(12px);
@@ -296,15 +343,12 @@ foreach ($activeDistrictList as $district) {
         }
         .logo-card:hover { border-color: #00d4ff; box-shadow: 0 0 20px rgba(0,212,255,0.2); }
         .logo-card:hover img { filter: grayscale(0%) brightness(1.2); }
-        
         #bangladeshMap {
             height: 500px;
             border-radius: 24px;
             border: 2px solid #00d4ff;
             box-shadow: 0 0 30px rgba(0,212,255,0.3);
         }
-        
-        /* Footer Perfect */
         footer {
             background: rgba(3, 6, 18, 0.95);
             border-top: 1px solid #00d4ff;
@@ -338,20 +382,20 @@ foreach ($activeDistrictList as $district) {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 38px;
-            height: 38px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             background: rgba(0,212,255,0.1);
             border: 1px solid rgba(0,212,255,0.3);
             color: #00d4ff;
             transition: 0.2s;
+            font-size: 1.2rem;
         }
         .footer-social a:hover {
             background: #00d4ff;
             color: #050b17;
             transform: translateY(-3px);
         }
-        
         .fab {
             position: fixed;
             z-index: 1050;
@@ -379,21 +423,56 @@ foreach ($activeDistrictList as $district) {
             transition: 0.2s;
             z-index: 1050;
         }
+        body.light {
+            background: #f0f4fc;
+            color: #1a1a2e;
+        }
+        body.light .glass-nav {
+            background: rgba(240, 244, 252, 0.9);
+            border-bottom-color: rgba(123, 47, 255, 0.3);
+        }
+        body.light .glass-nav.scrolled { background: rgba(240, 244, 252, 0.98); }
+        body.light .nav-link { color: rgba(26, 26, 46, 0.8) !important; }
+        body.light .nav-link:hover { background: rgba(123, 47, 255, 0.1); color: #7b2fff !important; }
+        body.light .btn-nav { background: linear-gradient(90deg, #7b2fff, #00c3ff); color: white; }
+        body.light .card-3d, body.light .counter-3d-card, body.light .chairman-card, 
+        body.light .testimonial-3d, body.light .cta-3d-card, body.light .logo-card {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: rgba(123, 47, 255, 0.2);
+        }
+        body.light .section-title { background: linear-gradient(120deg, #1a1a2e, #7b2fff); -webkit-background-clip: text; }
+        body.light .hero-title { background: linear-gradient(135deg, #1a1a2e, #7b2fff, #00d4ff); -webkit-background-clip: text; }
+        body.light .hero-subtitle, body.light .card-desc, body.light .text-white-50 { color: #2a2a48 !important; }
+        body.light footer { background: rgba(240, 244, 252, 0.95); border-top-color: #7b2fff; }
+        body.light footer a { color: #2a2a48; }
+        body.light .footer-social a { background: rgba(123,47,255,0.1); border-color: #7b2fff; color: #7b2fff; }
+        body.light .btn-3d-secondary { border-color: #7b2fff; color: #7b2fff; }
+        body.light .btn-3d-secondary:hover { background: rgba(123,47,255,0.1); }
+        body.light .section-label { border-color: #7b2fff; color: #7b2fff; background: rgba(123,47,255,0.1); }
+        body.light .btn-card { background: rgba(123,47,255,0.1); border-color: #7b2fff; color: #7b2fff; }
+        .card-img-top, .card-3d img, .chairman-avatar, .logo-card img {
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+        .card-3d img { height: 180px; object-fit: cover; }
         @media (max-width: 768px) {
             .hero-title { font-size: 2rem; }
-            .glass-nav { padding: 0.5rem 1rem; }
-            .navbar-collapse { background: rgba(5,11,23,0.95); border-radius: 20px; padding: 1rem; margin-top: 0.5rem; }
-            .card-3d .card-img-top { height: 150px; }
+            .glass-nav { width: 95%; top: 12px; padding: 0.3rem 1rem; }
+            .navbar-collapse { background: rgba(5,11,23,0.95); border-radius: 20px; padding: 1rem; margin-top: 0.8rem; }
+            body.light .navbar-collapse { background: rgba(240,244,252,0.95); }
+            .card-3d img { height: 140px; }
         }
     </style>
 </head>
 <body>
 
-<!-- 3D Canvas Background (Different: Cyber Network + Rotating Core) -->
+<!-- 3D Canvas Background - Neural Network / Connected Nodes Tech Design -->
 <canvas id="three-canvas"></canvas>
 
 <div class="main-content">
-    <!-- Navigation -->
+    <!-- Navigation - Rounded Floating Container -->
     <nav class="navbar navbar-expand-lg glass-nav" id="mainNavbar">
         <div class="container">
             <a class="navbar-brand" href="index.php">
@@ -411,14 +490,13 @@ foreach ($activeDistrictList as $district) {
                     <li class="nav-item"><a class="nav-link" href="portfolio.php">Portfolio</a></li>
                     <li class="nav-item"><a class="nav-link" href="chairman-speech.php">Chairman</a></li>
                     <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
-                    <li class="nav-item"><a href="contact.php" class="btn-nav ms-2">Contact Us</a></li>
                 </ul>
                 <button id="darkModeToggle" class="ms-3"><i class="fas fa-moon"></i></button>
             </div>
         </div>
     </nav>
 
-    <!-- Hero Slider (Original) -->
+    <!-- Hero Slider (unchanged) -->
     <section class="hero-section">
         <div class="swiper heroSwiper" style="position:absolute; inset:0;">
             <div class="swiper-wrapper">
@@ -458,7 +536,7 @@ foreach ($activeDistrictList as $district) {
         </div>
     </section>
 
-    <!-- Services -->
+    <!-- Services Section -->
     <section class="services-section bg-grid py-5">
         <div class="container">
             <div class="text-center mb-5">
@@ -473,15 +551,17 @@ foreach ($activeDistrictList as $district) {
                         <div class="card-3d p-3">
                             <div class="text-center">
                                 <?php if(!empty($service['image_url'])): ?>
-                                    <img src="<?php echo htmlspecialchars($service['image_url']); ?>" class="img-fluid rounded-3" style="height:160px; object-fit:cover; width:100%;">
+                                    <img src="<?php echo htmlspecialchars($service['image_url']); ?>" class="img-fluid rounded-3" style="height:160px; width:100%; object-fit:cover;" alt="<?php echo htmlspecialchars($service['title']); ?>">
                                 <?php else: ?>
-                                    <i class="<?php echo htmlspecialchars($service['icon_class'] ?? 'fas fa-vr-cardboard'); ?> fa-3x" style="color:#00d4ff;"></i>
+                                    <div style="height:160px; display:flex; align-items:center; justify-content:center; background:rgba(0,212,255,0.1); border-radius:12px;">
+                                        <i class="<?php echo htmlspecialchars($service['icon_class'] ?? 'fas fa-vr-cardboard'); ?> fa-3x" style="color:#00d4ff;"></i>
+                                    </div>
                                 <?php endif; ?>
                             </div>
                             <div class="mt-3">
                                 <h4 class="text-white fs-6 fw-bold"><?php echo htmlspecialchars($service['title']); ?></h4>
                                 <p class="small text-white-50"><?php echo htmlspecialchars(substr($service['description'], 0, 80)); ?>...</p>
-                                <span class="text-info small">Details <i class="fas fa-arrow-right"></i></span>
+                                <span class="btn-card">View Details <i class="fas fa-arrow-right"></i></span>
                             </div>
                         </div>
                     </a>
@@ -491,18 +571,7 @@ foreach ($activeDistrictList as $district) {
         </div>
     </section>
 
-    <!-- Counters -->
-    <section class="counter-section py-5">
-        <div class="container">
-            <div class="row g-4">
-                <div class="col-md-4"><div class="counter-3d-card p-4 text-center"><i class="fas fa-users fa-2x" style="color:#7b2fff;"></i><div class="counter-num fs-1 fw-bold" data-target="<?php echo $totalCustomers; ?>">0</div><div class="counter-label">Happy Customers</div></div></div>
-                <div class="col-md-4"><div class="counter-3d-card p-4 text-center"><i class="fas fa-globe fa-2x" style="color:#00d4ff;"></i><div class="counter-num fs-1 fw-bold" data-target="<?php echo $totalCountries; ?>">0</div><div class="counter-label">Countries Served</div></div></div>
-                <div class="col-md-4"><div class="counter-3d-card p-4 text-center"><i class="fas fa-map-marker-alt fa-2x" style="color:#ff2d78;"></i><div class="counter-num fs-1 fw-bold" data-target="<?php echo $activeDistricts; ?>">0</div><div class="counter-label">Bangladesh Districts</div></div></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Courses -->
+    <!-- Courses Section -->
     <section class="courses-section bg-dot py-5">
         <div class="container">
             <div class="text-center mb-5">
@@ -516,16 +585,18 @@ foreach ($activeDistrictList as $district) {
                     <a href="course-details.php?id=<?php echo $course['id']; ?>" class="text-decoration-none">
                         <div class="card-3d p-3">
                             <?php if(!empty($course['image_url'])): ?>
-                                <img src="<?php echo htmlspecialchars($course['image_url']); ?>" class="img-fluid rounded-3" style="height:140px; object-fit:cover; width:100%;">
+                                <img src="<?php echo htmlspecialchars($course['image_url']); ?>" class="img-fluid rounded-3" style="height:140px; width:100%; object-fit:cover;" alt="<?php echo htmlspecialchars($course['title']); ?>">
                             <?php else: ?>
-                                <div class="text-center py-3"><i class="<?php echo htmlspecialchars($course['icon_class'] ?? 'fas fa-book'); ?> fa-3x" style="color:#00d4ff;"></i></div>
+                                <div style="height:140px; display:flex; align-items:center; justify-content:center; background:rgba(0,212,255,0.1); border-radius:12px;">
+                                    <i class="<?php echo htmlspecialchars($course['icon_class'] ?? 'fas fa-book'); ?> fa-3x" style="color:#00d4ff;"></i>
+                                </div>
                             <?php endif; ?>
                             <div class="mt-2">
                                 <h5 class="text-white fs-6"><?php echo htmlspecialchars($course['title']); ?></h5>
                                 <p class="small text-white-50"><?php echo htmlspecialchars(substr($course['description'], 0, 60)); ?>...</p>
-                                <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex justify-content-between align-items-center mt-2">
                                     <span class="badge bg-info">$<?php echo number_format($course['price'], 0); ?></span>
-                                    <span class="small text-white-50"><?php echo $course['enrolled_students']; ?>+</span>
+                                    <span class="btn-card" style="padding:0.2rem 0.8rem;">Details <i class="fas fa-arrow-right"></i></span>
                                 </div>
                             </div>
                         </div>
@@ -539,7 +610,7 @@ foreach ($activeDistrictList as $district) {
         </div>
     </section>
 
-    <!-- Portfolio -->
+    <!-- Portfolio Section -->
     <section class="portfolio-section py-5">
         <div class="container">
             <div class="text-center mb-5">
@@ -551,11 +622,11 @@ foreach ($activeDistrictList as $district) {
                 <?php foreach($allPortfolios as $project): ?>
                 <div class="col-6 col-md-4 col-lg-3">
                     <div class="card-3d p-2">
-                        <img src="<?php echo htmlspecialchars($project['image_url']); ?>" class="img-fluid rounded-3" style="height:180px; object-fit:cover; width:100%;">
+                        <img src="<?php echo htmlspecialchars($project['image_url']); ?>" class="img-fluid rounded-3" style="height:180px; width:100%; object-fit:cover;" alt="<?php echo htmlspecialchars($project['title']); ?>">
                         <div class="p-2">
                             <h6 class="text-white"><?php echo htmlspecialchars($project['title']); ?></h6>
                             <p class="small text-white-50"><i class="fas fa-building"></i> <?php echo htmlspecialchars($project['client']); ?></p>
-                            <a href="portfolio-details.php?id=<?php echo $project['id']; ?>" class="small text-info">View Details <i class="fas fa-arrow-right"></i></a>
+                            <a href="portfolio-details.php?id=<?php echo $project['id']; ?>" class="btn-card">View Details <i class="fas fa-arrow-right"></i></a>
                         </div>
                     </div>
                 </div>
@@ -588,6 +659,35 @@ foreach ($activeDistrictList as $district) {
         </div>
     </section>
     <?php endif; ?>
+
+    <!-- COUNTERS SECTION -->
+    <section class="counter-section py-5">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="counter-3d-card p-4 text-center">
+                        <i class="fas fa-map-marked-alt fa-2x" style="color:#00ff9d;"></i>
+                        <div class="counter-num fs-1 fw-bold" data-target="<?php echo $activeDistricts; ?>">0</div>
+                        <div class="counter-label">Districts Reached in Bangladesh</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="counter-3d-card p-4 text-center">
+                        <i class="fas fa-smile-wink fa-2x" style="color:#ffcc44;"></i>
+                        <div class="counter-num fs-1 fw-bold" data-target="<?php echo $totalCustomers; ?>">0</div>
+                        <div class="counter-label">Happy Customers</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="counter-3d-card p-4 text-center">
+                        <i class="fas fa-globe fa-2x" style="color:#00d4ff;"></i>
+                        <div class="counter-num fs-1 fw-bold" data-target="<?php echo $totalCountries; ?>">0</div>
+                        <div class="counter-label">Countries Served Worldwide</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Bangladesh Map -->
     <section class="map-section py-5">
@@ -675,288 +775,293 @@ foreach ($activeDistrictList as $district) {
         </div>
     </section>
 
-    <!-- Footer (Perfect) -->
-    <footer>
-        <div class="container">
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <div class="footer-brand mb-2">ARTECH</div>
-                    <p class="small text-white-50">Immersive Reality & 3D Innovation Hub. Transforming ideas into digital realities.</p>
-                    <div class="footer-social d-flex gap-2 mt-3">
-                        <a href="#"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#"><i class="fab fa-twitter"></i></a>
-                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
-                        <a href="#"><i class="fab fa-instagram"></i></a>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <h5 class="footer-heading">Explore</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="services.php">Services</a></li>
-                        <li><a href="courses.php">Courses</a></li>
-                        <li><a href="portfolio.php">Portfolio</a></li>
-                        <li><a href="about.php">About Us</a></li>
-                    </ul>
-                </div>
-                <div class="col-md-3">
-                    <h5 class="footer-heading">Support</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="contact.php">Contact</a></li>
-                        <li><a href="#">Privacy Policy</a></li>
-                        <li><a href="#">Terms of Service</a></li>
-                        <li><a href="#">FAQ</a></li>
-                    </ul>
-                </div>
-                <div class="col-md-3">
-                    <h5 class="footer-heading">Newsletter</h5>
-                    <p class="small text-white-50">Subscribe for latest updates</p>
-                    <div class="input-group">
-                        <input type="email" class="form-control form-control-sm bg-dark text-white border-info" placeholder="Email">
-                        <button class="btn btn-sm btn-info" type="button"><i class="fas fa-paper-plane"></i></button>
-                    </div>
-                </div>
-            </div>
-            <hr class="border-secondary mt-4">
-            <div class="text-center small text-white-50">
-                &copy; <?php echo date('Y'); ?> ARTECH Solutions. All rights reserved. | 3D Immersive Technology
-            </div>
-        </div>
-    </footer>
-</div>
+    <!-- Footer -->
+    <?php include "footer.php"; ?>
+    <!-- Floating Buttons -->
+    <button class="fab fab-star" id="testimonialBtn"><i class="fas fa-star"></i></button>
+    <button class="fab fab-chat" id="chatBtn"><i class="fas fa-comment-dots"></i></button>
+    <div class="back-to-top" id="backToTop"><i class="fas fa-arrow-up"></i></div>
 
-<!-- Floating Buttons -->
-<button class="fab fab-star" id="testimonialBtn"><i class="fas fa-star"></i></button>
-<button class="fab fab-chat" id="chatBtn"><i class="fas fa-comment-dots"></i></button>
-<div class="back-to-top" id="backToTop"><i class="fas fa-arrow-up"></i></div>
+    <!-- Modals -->
+    <div class="modal fade" id="registerModal" tabindex="-1"><div class="modal-dialog modal-sm"><div class="modal-content bg-dark text-white"><div class="modal-header"><h5>Register</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><form id="registerForm"><input type="text" id="regName" class="form-control mb-2" placeholder="Name"><input type="email" id="regEmail" class="form-control mb-2" placeholder="Email"><button class="btn btn-info w-100">Continue</button></form></div></div></div></div>
+    <div class="modal fade" id="testimonialModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content bg-dark text-white"><div class="modal-header"><h5>Leave Review</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><form id="testimonialForm"><input type="text" id="testimonialName" class="form-control mb-2" readonly><input type="email" id="testimonialEmail" class="form-control mb-2" readonly><select id="testimonialRating" class="form-select mb-2"><option value="5">★★★★★</option><option value="4">★★★★☆</option></select><textarea id="testimonialText" class="form-control" rows="3"></textarea><button class="btn btn-info mt-3 w-100">Submit</button></form><div id="testimonialMessage"></div></div></div></div></div>
+    <div class="modal fade" id="chatModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content bg-dark text-white"><div class="modal-header"><h5>Chat</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><form id="chatForm"><input type="text" id="chatName" class="form-control mb-2" readonly><input type="email" id="chatEmail" class="form-control mb-2" readonly><textarea id="chatMessage" class="form-control" rows="3"></textarea><button class="btn btn-info mt-3 w-100">Send</button></form><div id="chatMessageDiv"></div></div></div></div></div>
 
-<!-- Modals -->
-<div class="modal fade" id="registerModal" tabindex="-1"><div class="modal-dialog modal-sm"><div class="modal-content bg-dark text-white"><div class="modal-header"><h5>Register</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><form id="registerForm"><input type="text" id="regName" class="form-control mb-2" placeholder="Name"><input type="email" id="regEmail" class="form-control mb-2" placeholder="Email"><button class="btn btn-info w-100">Continue</button></form></div></div></div></div>
-<div class="modal fade" id="testimonialModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content bg-dark text-white"><div class="modal-header"><h5>Leave Review</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><form id="testimonialForm"><input type="text" id="testimonialName" class="form-control mb-2" readonly><input type="email" id="testimonialEmail" class="form-control mb-2" readonly><select id="testimonialRating" class="form-select mb-2"><option value="5">★★★★★</option><option value="4">★★★★☆</option></select><textarea id="testimonialText" class="form-control" rows="3"></textarea><button class="btn btn-info mt-3 w-100">Submit</button></form><div id="testimonialMessage"></div></div></div></div></div>
-<div class="modal fade" id="chatModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content bg-dark text-white"><div class="modal-header"><h5>Chat</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><form id="chatForm"><input type="text" id="chatName" class="form-control mb-2" readonly><input type="email" id="chatEmail" class="form-control mb-2" readonly><textarea id="chatMessage" class="form-control" rows="3"></textarea><button class="btn btn-info mt-3 w-100">Send</button></form><div id="chatMessageDiv"></div></div></div></div></div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="importmap">
-    { "imports": { "three": "https://unpkg.com/three@0.128.0/build/three.module.js" } }
-</script>
-<script type="module">
-    import * as THREE from 'three';
-    
-    // --- Distinct 3D Tech Background: Floating Hexagons + Particle Wave + Central Core ---
-    const canvas = document.getElementById('three-canvas');
-    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x050b17);
-    scene.fog = new THREE.FogExp2(0x050b17, 0.006);
-    
-    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 2, 10);
-    camera.lookAt(0, 0, 0);
-    
-    // Lights
-    const ambientLight = new THREE.AmbientLight(0x111122);
-    scene.add(ambientLight);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-    dirLight.position.set(2, 3, 4);
-    scene.add(dirLight);
-    const pointLight = new THREE.PointLight(0x2266ff, 0.6);
-    pointLight.position.set(-1, 2, 3);
-    scene.add(pointLight);
-    
-    // Central glowing core (brand)
-    const coreGeo = new THREE.IcosahedronGeometry(0.8, 0);
-    const coreMat = new THREE.MeshStandardMaterial({ color: 0x00aaff, emissive: 0x2266aa, emissiveIntensity: 0.9, metalness: 0.8, roughness: 0.2 });
-    const core = new THREE.Mesh(coreGeo, coreMat);
-    scene.add(core);
-    
-    // Rotating wireframe sphere
-    const wireSphere = new THREE.Mesh(new THREE.SphereGeometry(1.1, 24, 18), new THREE.MeshBasicMaterial({ color: 0x00d4ff, wireframe: true, transparent: true, opacity: 0.25 }));
-    scene.add(wireSphere);
-    
-    // Floating hexagon rings (Group)
-    const hexGroup = new THREE.Group();
-    const hexGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.05, 6);
-    const hexMat = new THREE.MeshStandardMaterial({ color: 0x7b2fff, emissive: 0x3300aa, metalness: 0.7 });
-    for (let i = 0; i < 24; i++) {
-        const hex = new THREE.Mesh(hexGeo, hexMat);
-        const angle = (i / 24) * Math.PI * 2;
-        const radius = 1.9;
-        hex.position.x = Math.cos(angle) * radius;
-        hex.position.z = Math.sin(angle) * radius;
-        hex.position.y = Math.sin(angle * 2) * 0.3;
-        hex.rotation.z = angle;
-        hexGroup.add(hex);
-    }
-    scene.add(hexGroup);
-    
-    // Particle stream
-    const particleCount = 2500;
-    const particlesGeo = new THREE.BufferGeometry();
-    const positions = new Float32Array(particleCount * 3);
-    for (let i = 0; i < particleCount; i++) {
-        positions[i*3] = (Math.random() - 0.5) * 45;
-        positions[i*3+1] = (Math.random() - 0.5) * 28;
-        positions[i*3+2] = (Math.random() - 0.5) * 35 - 15;
-    }
-    particlesGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const particleMat = new THREE.PointsMaterial({ color: 0x44ccff, size: 0.07, transparent: true, opacity: 0.5 });
-    const particles = new THREE.Points(particlesGeo, particleMat);
-    scene.add(particles);
-    
-    // Additional floating glowing orbs
-    const orbGroup = [];
-    for (let i = 0; i < 60; i++) {
-        const orbGeo = new THREE.SphereGeometry(0.05 + Math.random()*0.08, 6);
-        const orbMat = new THREE.MeshStandardMaterial({ color: 0x44aaff, emissive: 0x0088ff, emissiveIntensity: 0.5 });
-        const orb = new THREE.Mesh(orbGeo, orbMat);
-        orb.position.set((Math.random() - 0.5)*12, (Math.random() - 0.5)*8, (Math.random() - 0.5)*15 - 5);
-        orb.userData = { speedX: (Math.random() - 0.5)*0.005, speedY: (Math.random() - 0.5)*0.005, speedZ: (Math.random() - 0.5)*0.005 };
-        scene.add(orb);
-        orbGroup.push(orb);
-    }
-    
-    // Grid floor
-    const gridHelper = new THREE.GridHelper(35, 50, 0x00ccff, 0x3366aa);
-    gridHelper.position.y = -2.5;
-    gridHelper.material.transparent = true;
-    gridHelper.material.opacity = 0.2;
-    scene.add(gridHelper);
-    
-    let time = 0;
-    function animate() {
-        requestAnimationFrame(animate);
-        time += 0.012;
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.128.0/build/three.module.js" } }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
         
-        core.rotation.y = time * 0.4;
-        core.rotation.x = Math.sin(time * 0.5) * 0.2;
-        wireSphere.rotation.x = time * 0.2;
-        wireSphere.rotation.y = time * 0.3;
-        hexGroup.rotation.y = time * 0.2;
-        hexGroup.rotation.x = Math.sin(time * 0.3) * 0.1;
-        particles.rotation.y = time * 0.03;
-        
-        orbGroup.forEach(orb => {
-            orb.position.x += orb.userData.speedX;
-            orb.position.y += orb.userData.speedY;
-            orb.position.z += orb.userData.speedZ;
-            if (Math.abs(orb.position.x) > 14) orb.userData.speedX *= -1;
-            if (Math.abs(orb.position.y) > 9) orb.userData.speedY *= -1;
-            if (Math.abs(orb.position.z) > 18) orb.userData.speedZ *= -1;
-        });
-        
-        camera.position.x = Math.sin(time * 0.15) * 0.4;
-        camera.position.y = 2 + Math.sin(time * 0.3) * 0.1;
-        camera.lookAt(0, 0, 0);
-        renderer.render(scene, camera);
-    }
-    animate();
-    
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
+        // --- 3D BACKGROUND: Neural Network / Connected Nodes ---
+        const canvas = document.getElementById('three-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-    
-    // Map Init
-    function initMap() {
-        const data = <?php echo json_encode($activeDistrictsData); ?>;
-        const map = L.map('bangladeshMap').setView([23.8, 90.3], 7);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© OSM' }).addTo(map);
-        data.forEach(d => {
-            L.circleMarker([d.lat, d.lng], { radius: 8, fillColor: '#0cf', color: '#fff', weight: 1.5, fillOpacity: 0.8 }).addTo(map).bindPopup(`<b>${d.name}</b><br>Active AR Hub`);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050b17);
+        scene.fog = new THREE.FogExp2(0x050b17, 0.004);
+        
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 1.5, 14);
+        
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x111122);
+        scene.add(ambientLight);
+        const mainLight = new THREE.DirectionalLight(0xffffff, 1);
+        mainLight.position.set(2, 3, 4);
+        scene.add(mainLight);
+        const fillLight = new THREE.PointLight(0x2266ff, 0.4);
+        fillLight.position.set(-2, 1, 3);
+        scene.add(fillLight);
+        const backLight = new THREE.PointLight(0xff44aa, 0.3);
+        backLight.position.set(0, 2, -5);
+        scene.add(backLight);
+        
+        // Central core
+        const coreGeo = new THREE.SphereGeometry(0.65, 32, 32);
+        const coreMat = new THREE.MeshStandardMaterial({ color: 0x00aaff, emissive: 0x0088ff, emissiveIntensity: 0.8, metalness: 0.9, roughness: 0.2 });
+        const core = new THREE.Mesh(coreGeo, coreMat);
+        scene.add(core);
+        
+        const wireframeSphere = new THREE.Mesh(
+            new THREE.SphereGeometry(0.9, 24, 18),
+            new THREE.MeshBasicMaterial({ color: 0x00d4ff, wireframe: true, transparent: true, opacity: 0.3 })
+        );
+        scene.add(wireframeSphere);
+        
+        // Network nodes
+        const nodeCount = 180;
+        const nodePositions = [];
+        const nodeGroup = new THREE.Group();
+        for (let i = 0; i < nodeCount; i++) {
+            const radius = 2.2 + Math.random() * 1.8;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            const x = radius * Math.sin(phi) * Math.cos(theta);
+            const y = radius * Math.sin(phi) * Math.sin(theta) * 0.8;
+            const z = radius * Math.cos(phi);
+            nodePositions.push(new THREE.Vector3(x, y, z));
+            const sphereGeo = new THREE.SphereGeometry(0.045, 8, 8);
+            const sphereMat = new THREE.MeshStandardMaterial({ color: 0x44ccff, emissive: 0x0088aa, emissiveIntensity: 0.3 });
+            const nodeSphere = new THREE.Mesh(sphereGeo, sphereMat);
+            nodeSphere.position.set(x, y, z);
+            nodeGroup.add(nodeSphere);
+        }
+        scene.add(nodeGroup);
+        
+        // Connect close nodes with lines
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00d4ff, transparent: true, opacity: 0.35 });
+        for (let i = 0; i < nodePositions.length; i++) {
+            for (let j = i + 1; j < nodePositions.length; j++) {
+                if (nodePositions[i].distanceTo(nodePositions[j]) < 1.8) {
+                    const points = [nodePositions[i], nodePositions[j]];
+                    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                    const line = new THREE.Line(geometry, lineMaterial);
+                    scene.add(line);
+                }
+            }
+        }
+        
+        // Floating particles
+        const particleCount = 2500;
+        const particlesGeo = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        for (let i = 0; i < particleCount; i++) {
+            positions[i*3] = (Math.random() - 0.5) * 40;
+            positions[i*3+1] = (Math.random() - 0.5) * 25;
+            positions[i*3+2] = (Math.random() - 0.5) * 35 - 10;
+        }
+        particlesGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const particleMat = new THREE.PointsMaterial({ color: 0x44aaff, size: 0.045, transparent: true, opacity: 0.5 });
+        const particleSystem = new THREE.Points(particlesGeo, particleMat);
+        scene.add(particleSystem);
+        
+        // Rotating rings
+        const ringGeo = new THREE.TorusGeometry(2.1, 0.04, 64, 200);
+        const ringMat = new THREE.MeshStandardMaterial({ color: 0x7b2fff, emissive: 0x3300aa, emissiveIntensity: 0.4 });
+        const ring1 = new THREE.Mesh(ringGeo, ringMat);
+        ring1.rotation.x = Math.PI / 2;
+        scene.add(ring1);
+        const ring2 = new THREE.Mesh(ringGeo, ringMat);
+        ring2.rotation.z = Math.PI / 2;
+        scene.add(ring2);
+        const ring3 = new THREE.Mesh(ringGeo, ringMat);
+        ring3.rotation.x = Math.PI / 3;
+        ring3.rotation.z = Math.PI / 4;
+        scene.add(ring3);
+        
+        const gridHelper = new THREE.GridHelper(30, 40, 0x00ccff, 0x3366aa);
+        gridHelper.position.y = -2.8;
+        gridHelper.material.transparent = true;
+        gridHelper.material.opacity = 0.2;
+        scene.add(gridHelper);
+        
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.008;
+            core.rotation.y = time * 0.3;
+            core.rotation.x = Math.sin(time * 0.5) * 0.1;
+            wireframeSphere.rotation.y = time * 0.2;
+            wireframeSphere.rotation.x = time * 0.15;
+            ring1.rotation.z = time * 0.1;
+            ring2.rotation.x = time * 0.12;
+            ring3.rotation.y = time * 0.08;
+            nodeGroup.rotation.y = time * 0.05;
+            nodeGroup.rotation.x = Math.sin(time * 0.2) * 0.1;
+            particleSystem.rotation.y = time * 0.02;
+            particleSystem.rotation.x = Math.sin(time * 0.15) * 0.05;
+            camera.position.x = Math.sin(time * 0.1) * 0.4;
+            camera.position.y = 1.5 + Math.sin(time * 0.2) * 0.1;
+            camera.lookAt(0, 0, 0);
+            renderer.render(scene, camera);
+        }
+        animate();
+        
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         });
-    }
-    initMap();
-    
-    // Swipers
-    new Swiper('.heroSwiper', { loop: true, autoplay: { delay: 5500 }, effect: 'fade', navigation: { nextEl: '.heroSwiper .swiper-button-next', prevEl: '.heroSwiper .swiper-button-prev' } });
-    new Swiper('.logoSlider', { slidesPerView: 2, spaceBetween: 16, loop: true, autoplay: { delay: 2200 }, breakpoints: { 576:{slidesPerView:3}, 768:{slidesPerView:4}, 1024:{slidesPerView:6} } });
-    new Swiper('.testimonialSwiper', { slidesPerView: 1, spaceBetween: 24, loop: true, autoplay: { delay: 4200 }, pagination: { el: '.testimonial-pagination', clickable: true }, navigation: { nextEl: '.testimonial-next', prevEl: '.testimonial-prev' }, breakpoints: { 640:{slidesPerView:2}, 992:{slidesPerView:3} } });
-    
-    // Counters
-    const counters = document.querySelectorAll('.counter-num');
-    const obs = new IntersectionObserver(entries => {
-        entries.forEach(e => {
-            if (e.isIntersecting) {
-                const el = e.target;
-                const target = parseInt(el.dataset.target);
-                let curr = 0, step = target / 60;
-                const update = () => { curr += step; if (curr < target) { el.innerText = Math.ceil(curr); requestAnimationFrame(update); } else el.innerText = target; };
-                update();
-                obs.unobserve(el);
+        
+        // Leaflet Map
+        let map;
+        function initMap() {
+            const data = <?php echo json_encode($activeDistrictsData); ?>;
+            const isLight = document.body.classList.contains('light');
+            const tileUrl = isLight 
+                ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+                : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+            map = L.map('bangladeshMap').setView([23.8, 90.3], 7);
+            L.tileLayer(tileUrl, { attribution: '© OSM' }).addTo(map);
+            data.forEach(d => {
+                L.circleMarker([d.lat, d.lng], { radius: 8, fillColor: '#0cf', color: '#fff', weight: 1.5, fillOpacity: 0.8 }).addTo(map).bindPopup(`<b>${d.name}</b><br>Active AR Hub`);
+            });
+            window.map = map;
+        }
+        initMap();
+        
+        function updateMapTiles() {
+            if (!window.map) return;
+            const isLight = document.body.classList.contains('light');
+            const newTileUrl = isLight 
+                ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+                : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+            window.map.eachLayer(layer => {
+                if (layer instanceof L.TileLayer) window.map.removeLayer(layer);
+            });
+            L.tileLayer(newTileUrl, { attribution: '© OSM' }).addTo(window.map);
+        }
+        
+        // Swipers
+        new Swiper('.heroSwiper', { loop: true, autoplay: { delay: 5500 }, effect: 'fade', navigation: { nextEl: '.heroSwiper .swiper-button-next', prevEl: '.heroSwiper .swiper-button-prev' } });
+        new Swiper('.logoSlider', { slidesPerView: 2, spaceBetween: 16, loop: true, autoplay: { delay: 2200 }, breakpoints: { 576:{slidesPerView:3}, 768:{slidesPerView:4}, 1024:{slidesPerView:6} } });
+        new Swiper('.testimonialSwiper', { slidesPerView: 1, spaceBetween: 24, loop: true, autoplay: { delay: 4200 }, pagination: { el: '.testimonial-pagination', clickable: true }, navigation: { nextEl: '.testimonial-next', prevEl: '.testimonial-prev' }, breakpoints: { 640:{slidesPerView:2}, 992:{slidesPerView:3} } });
+        
+        // Counters Animation
+        const counters = document.querySelectorAll('.counter-num');
+        const obs = new IntersectionObserver(entries => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    const el = e.target;
+                    const target = parseInt(el.dataset.target);
+                    let curr = 0, step = target / 60;
+                    const update = () => { curr += step; if (curr < target) { el.innerText = Math.ceil(curr); requestAnimationFrame(update); } else el.innerText = target; };
+                    update();
+                    obs.unobserve(el);
+                }
+            });
+        }, { threshold: 0.5 });
+        counters.forEach(c => obs.observe(c));
+        
+        // Navbar scroll
+        window.addEventListener('scroll', () => {
+            document.getElementById('mainNavbar').classList.toggle('scrolled', window.scrollY > 60);
+            document.getElementById('backToTop').classList.toggle('show', window.scrollY > 300);
+        });
+        document.getElementById('backToTop').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+        
+        // Dark Mode Toggle
+        const toggleBtn = document.getElementById('darkModeToggle');
+        const storedTheme = localStorage.getItem('darkMode');
+        if (storedTheme === 'light') {
+            document.body.classList.add('light');
+            toggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
+        } else {
+            toggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+        }
+        toggleBtn.addEventListener('click', () => {
+            document.body.classList.toggle('light');
+            const isLight = document.body.classList.contains('light');
+            localStorage.setItem('darkMode', isLight ? 'light' : 'dark');
+            toggleBtn.innerHTML = isLight ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
+            updateMapTiles();
+        });
+        
+        // Newsletter subscription
+        document.getElementById('newsletterSubscribe')?.addEventListener('click', () => {
+            const email = document.getElementById('newsletterEmail').value;
+            if (email && email.includes('@')) {
+                alert(`Thank you for subscribing! ${email} will receive updates.`);
+                document.getElementById('newsletterEmail').value = '';
+            } else {
+                alert('Please enter a valid email address.');
             }
         });
-    }, { threshold: 0.5 });
-    counters.forEach(c => obs.observe(c));
-    
-    // Navbar
-    window.addEventListener('scroll', () => {
-        document.getElementById('mainNavbar').classList.toggle('scrolled', window.scrollY > 60);
-        document.getElementById('backToTop').classList.toggle('show', window.scrollY > 300);
-    });
-    document.getElementById('backToTop').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-    
-    // Dark Mode (visual only)
-    const toggleBtn = document.getElementById('darkModeToggle');
-    let light = false;
-    toggleBtn.addEventListener('click', () => {
-        light = !light;
-        document.body.style.background = light ? "#eef5ff" : "#050b17";
-        toggleBtn.innerHTML = light ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
-    });
-    
-    // Registration & Testimonial/Chat logic (unchanged)
-    let userRegistered = sessionStorage.getItem('userRegistered') === 'true';
-    let userName = sessionStorage.getItem('userName') || '';
-    let userEmail = sessionStorage.getItem('userEmail') || '';
-    const registerModal = new bootstrap.Modal(document.getElementById('registerModal'));
-    const testimonialModal = new bootstrap.Modal(document.getElementById('testimonialModal'));
-    const chatModal = new bootstrap.Modal(document.getElementById('chatModal'));
-    function openTestimonialModal() { document.getElementById('testimonialName').value = userName; document.getElementById('testimonialEmail').value = userEmail; testimonialModal.show(); }
-    function openChatModal() { document.getElementById('chatName').value = userName; document.getElementById('chatEmail').value = userEmail; chatModal.show(); }
-    document.getElementById('testimonialBtn').addEventListener('click', () => { if (!userRegistered) { sessionStorage.setItem('pendingAction','testimonial'); registerModal.show(); } else openTestimonialModal(); });
-    document.getElementById('chatBtn').addEventListener('click', () => { if (!userRegistered) { sessionStorage.setItem('pendingAction','chat'); registerModal.show(); } else openChatModal(); });
-    document.getElementById('registerForm').addEventListener('submit', e => {
-        e.preventDefault();
-        const n = document.getElementById('regName').value.trim();
-        const em = document.getElementById('regEmail').value.trim();
-        if (n && em) {
-            sessionStorage.setItem('userRegistered','true');
-            sessionStorage.setItem('userName', n);
-            sessionStorage.setItem('userEmail', em);
-            userRegistered=true; userName=n; userEmail=em;
-            registerModal.hide();
-            const action = sessionStorage.getItem('pendingAction');
-            if (action==='testimonial') openTestimonialModal();
-            else if (action==='chat') openChatModal();
-            sessionStorage.removeItem('pendingAction');
-        }
-    });
-    document.getElementById('testimonialForm')?.addEventListener('submit', async e => {
-        e.preventDefault();
-        const fd = new FormData();
-        fd.append('client_name', userName); fd.append('email', userEmail);
-        fd.append('testimonial_text', document.getElementById('testimonialText').value);
-        fd.append('rating', document.getElementById('testimonialRating').value);
-        const res = await fetch('submit_testimonial.php', { method:'POST', body:fd });
-        const data = await res.json();
-        document.getElementById('testimonialMessage').innerHTML = `<div class="alert alert-${data.success?'success':'danger'}">${data.message}</div>`;
-        if (data.success) setTimeout(() => testimonialModal.hide(), 2000);
-    });
-    document.getElementById('chatForm')?.addEventListener('submit', async e => {
-        e.preventDefault();
-        const fd = new FormData();
-        fd.append('name', userName); fd.append('email', userEmail);
-        fd.append('message', document.getElementById('chatMessage').value);
-        const res = await fetch('submit_chat.php', { method:'POST', body:fd });
-        const data = await res.json();
-        document.getElementById('chatMessageDiv').innerHTML = `<div class="alert alert-${data.success?'success':'danger'}">${data.message}</div>`;
-        if (data.success) setTimeout(() => chatModal.hide(), 2000);
-    });
-</script>
+        
+        // Registration & Testimonial/Chat logic
+        let userRegistered = sessionStorage.getItem('userRegistered') === 'true';
+        let userName = sessionStorage.getItem('userName') || '';
+        let userEmail = sessionStorage.getItem('userEmail') || '';
+        const registerModal = new bootstrap.Modal(document.getElementById('registerModal'));
+        const testimonialModal = new bootstrap.Modal(document.getElementById('testimonialModal'));
+        const chatModal = new bootstrap.Modal(document.getElementById('chatModal'));
+        function openTestimonialModal() { document.getElementById('testimonialName').value = userName; document.getElementById('testimonialEmail').value = userEmail; testimonialModal.show(); }
+        function openChatModal() { document.getElementById('chatName').value = userName; document.getElementById('chatEmail').value = userEmail; chatModal.show(); }
+        document.getElementById('testimonialBtn').addEventListener('click', () => { if (!userRegistered) { sessionStorage.setItem('pendingAction','testimonial'); registerModal.show(); } else openTestimonialModal(); });
+        document.getElementById('chatBtn').addEventListener('click', () => { if (!userRegistered) { sessionStorage.setItem('pendingAction','chat'); registerModal.show(); } else openChatModal(); });
+        document.getElementById('registerForm').addEventListener('submit', e => {
+            e.preventDefault();
+            const n = document.getElementById('regName').value.trim();
+            const em = document.getElementById('regEmail').value.trim();
+            if (n && em) {
+                sessionStorage.setItem('userRegistered','true');
+                sessionStorage.setItem('userName', n);
+                sessionStorage.setItem('userEmail', em);
+                userRegistered=true; userName=n; userEmail=em;
+                registerModal.hide();
+                const action = sessionStorage.getItem('pendingAction');
+                if (action==='testimonial') openTestimonialModal();
+                else if (action==='chat') openChatModal();
+                sessionStorage.removeItem('pendingAction');
+            }
+        });
+        document.getElementById('testimonialForm')?.addEventListener('submit', async e => {
+            e.preventDefault();
+            const fd = new FormData();
+            fd.append('client_name', userName); fd.append('email', userEmail);
+            fd.append('testimonial_text', document.getElementById('testimonialText').value);
+            fd.append('rating', document.getElementById('testimonialRating').value);
+            const res = await fetch('submit_testimonial.php', { method:'POST', body:fd });
+            const data = await res.json();
+            document.getElementById('testimonialMessage').innerHTML = `<div class="alert alert-${data.success?'success':'danger'}">${data.message}</div>`;
+            if (data.success) setTimeout(() => testimonialModal.hide(), 2000);
+        });
+        document.getElementById('chatForm')?.addEventListener('submit', async e => {
+            e.preventDefault();
+            const fd = new FormData();
+            fd.append('name', userName); fd.append('email', userEmail);
+            fd.append('message', document.getElementById('chatMessage').value);
+            const res = await fetch('submit_chat.php', { method:'POST', body:fd });
+            const data = await res.json();
+            document.getElementById('chatMessageDiv').innerHTML = `<div class="alert alert-${data.success?'success':'danger'}">${data.message}</div>`;
+            if (data.success) setTimeout(() => chatModal.hide(), 2000);
+        });
+    </script>
 </body>
 </html>
