@@ -104,12 +104,10 @@ foreach ($activeDistrictList as $district) {
             border-color: rgba(0, 212, 255, 0.6);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 30px rgba(0, 212, 255, 0.2);
         }
-        /* Adjust inner container padding */
         .glass-nav .container {
             padding: 0;
             max-width: 100%;
         }
-        /* Navbar brand remains same style */
         .navbar-brand {
             font-family: 'Orbitron', monospace;
             font-size: 1.7rem;
@@ -333,16 +331,28 @@ foreach ($activeDistrictList as $district) {
             border-radius: 16px;
             padding: 1rem;
             transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 80px;
         }
+        /* ===== FIX: Trusted by Innovators logos display fully ===== */
         .logo-card img {
-            max-height: 50px;
+            max-height: 70px;   /* increased from 50px to show full logos */
             max-width: 100%;
+            width: auto;
+            height: auto;
             object-fit: contain;
             filter: grayscale(30%) brightness(1.1);
             transition: 0.3s;
         }
-        .logo-card:hover { border-color: #00d4ff; box-shadow: 0 0 20px rgba(0,212,255,0.2); }
-        .logo-card:hover img { filter: grayscale(0%) brightness(1.2); }
+        .logo-card:hover {
+            border-color: #00d4ff;
+            box-shadow: 0 0 20px rgba(0,212,255,0.2);
+        }
+        .logo-card:hover img {
+            filter: grayscale(0%) brightness(1.2);
+        }
         #bangladeshMap {
             height: 500px;
             border-radius: 24px;
@@ -463,6 +473,7 @@ foreach ($activeDistrictList as $district) {
             .navbar-collapse { background: rgba(5,11,23,0.95); border-radius: 20px; padding: 1rem; margin-top: 0.8rem; }
             body.light .navbar-collapse { background: rgba(240,244,252,0.95); }
             .card-3d img { height: 140px; }
+            .logo-card img { max-height: 50px; } /* adapt for mobile */
         }
     </style>
 </head>
