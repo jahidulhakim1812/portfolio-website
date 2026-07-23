@@ -10,7 +10,8 @@
     <div class="menu">
         <div class="menu-title">CORE</div>
         <a href="dashboard.php"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
-        <a href="manage_courses.php"><i class="fas fa-graduation-cap"></i><span>Courses</span></a>
+        <a href="add_courses.php"><i class="fas fa-graduation-cap"></i><span>Courses</span></a>
+        <a href="manage_courses.php"><i class="fas fa-list"></i><span>Manage Courses</span></a>
         <a href="manage_sliders.php"><i class="fas fa-images"></i><span>Sliders</span></a>
         <a href="manage_services.php"><i class="fas fa-cogs"></i><span>Services</span></a>
         <a href="manage_portfolios.php"><i class="fas fa-briefcase"></i><span>Portfolio</span></a>
